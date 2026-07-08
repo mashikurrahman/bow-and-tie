@@ -1,0 +1,25 @@
+# Dependencies
+**/node_modules
+
+# Build output
+**/dist
+
+# Env & secrets
+**/.env
+!**/.env.example
+
+# Database
+**/*.db
+**/*.db-journal
+
+# Logs & OS
+*.log
+.DS_Store
+Thumbs.db
+
+# Local tooling
+.claude/
+
+# Design references
+_designs/
+*.zip

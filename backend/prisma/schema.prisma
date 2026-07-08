@@ -1,0 +1,147 @@
+// ---------------------------------------------------------------------------
+// Prisma schema for the Bow Clips & Hair Accessories store.
+//
+// LOCAL DEV uses SQLite (zero install, runs immediately, used for testing).
+// FOR PRODUCTION with PostgreSQL, change the datasource block to:
+//
+//   datasource db {
+//     provider = "postgresql"
+//     url      = env("DATABASE_URL")
+//   }
+//
+// and set DATABASE_URL in .env to your Postgres connection string, e.g.
+//   postgresql://user:password@localhost:5432/bowandtie
+// then run:  npm run prisma:migrate
+//
+// The application code is database-agnostic (it goes through Prisma), so no
+// other change is required. See README for the docker-compose / Neon guides.
+// ---------------------------------------------------------------------------
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        String    @id @default(cuid())
+  name      String
+  email     String    @unique
+  password  String
+  phone     String?
+  role      String    @default("customer") // "customer" | "admin"
+  addresses Address[]
+  orders    Order[]
+  createdAt DateTime  @default(now())
+}
+
+model Address {
+  id      String  @id @default(cuid())
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId  String
+  label   String?
+  name    String
+  phone   String
+  address String
+  city    String
+}
+
+model Product {
+  id            String   @id // slug, e.g. "satin-cloud-bow"
+  name          String
+  category      String
+  price         Int // whole BDT
+  originalPrice Int
+  costPrice     Int      @default(0) // buying cost, used for profit reports (admin)
+  stock         Int      @default(0)
+  rating        Float    @default(0)
+  reviewsCount  Int      @default(0)
+  badge         String   @default("")
+  description   String
+  fabric        String   @default("")
+  delivery      String   @default("")
+  colors        String   @default("[]") // JSON array
+  sizes         String   @default("[]") // JSON array
+  gallery       String   @default("[]") // JSON array
+  image         String
+  inStock       Boolean  @default(true)
+  featured      Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  reviews       Review[]
+}
+
+model Review {
+  id        String  @id @default(cuid())
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId String
+  name      String
+  rating    Int
+  date      String
+  text      String
+}
+
+model Order {
+  id              String      @id // custom, e.g. "BC1A2B3"
+  user            User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userId          String?
+  items           OrderItem[]
+  subtotal        Int
+  discount        Int         @default(0)
+  shipping        Int         @default(0)
+  total           Int
+  customerName    String
+  customerPhone   String
+  customerAddress String
+  customerCity    String
+  payment         String // "cod" | "bkash" | "nagad"
+  txnId           String?
+  notes           String?
+  promoCode       String?
+  status          String      @default("Processing")
+  timeline        String      @default("[]") // JSON array of { status, at }
+  createdAt       DateTime    @default(now())
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId   String
+  productId String?
+  name      String
+  image     String
+  price     Int
+  quantity  Int
+  color     String?
+  size      String?
+}
+
+model Promo {
+  code      String   @id
+  rate      Float // 0.25 = 25% off
+  active    Boolean  @default(true)
+  label     String   @default("")
+  createdAt DateTime @default(now())
+}
+
+// A promotion / campaign: auto-applies a % discount to all or selected
+// products for an optional date window, and can surface as a home popup and a
+// hero slider banner.
+model Promotion {
+  id          String    @id @default(cuid())
+  title       String
+  description String    @default("")
+  percent     Int // 25 = 25% off
+  scope       String    @default("all") // "all" | "selected"
+  productIds  String    @default("[]") // JSON array (when scope = selected)
+  startsAt    DateTime?
+  endsAt      DateTime?
+  active      Boolean   @default(true)
+  showPopup   Boolean   @default(true)
+  showSlider  Boolean   @default(true)
+  bgColor     String    @default("#c9527a")
+  ctaLabel    String    @default("Shop the sale")
+  createdAt   DateTime  @default(now())
+}

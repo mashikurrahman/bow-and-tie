@@ -1,0 +1,24 @@
+# Local PostgreSQL for the Bow & Tie backend.
+# Usage:
+#   docker compose up -d
+# Then in backend/.env set:
+#   DATABASE_URL="postgresql://postgres:postgres@localhost:5432/bowandtie?schema=public"
+# and switch prisma/schema.prisma datasource provider to "postgresql",
+# then run:  npm run prisma:migrate && npm run seed
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: bowandtie-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: bowandtie
+    ports:
+      - '5432:5432'
+    volumes:
+      - bowandtie_pgdata:/var/lib/postgresql/data
+
+volumes:
+  bowandtie_pgdata:
