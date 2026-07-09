@@ -7,6 +7,8 @@ const ROSE = '#c9527a'
 const money = (n: number) => `৳${n.toLocaleString('en-US')}`
 const store = config.storeName
 const app = config.appUrl.replace(/\/$/, '')
+const paymentLabel = (p: string) =>
+  p === 'cod' ? 'Cash on Delivery' : p === 'bkash' ? 'bKash' : p === 'nagad' ? 'Nagad' : p.toUpperCase()
 
 function layout(heading: string, body: string, preheader = ''): string {
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
@@ -72,13 +74,28 @@ function orderTable(o: OrderEmailData): string {
 }
 
 export function orderConfirmationEmail(to: string, o: OrderEmailData): MailInput {
+  const paid = o.payment === 'cod'
+    ? `Amount payable on delivery: <b>${money(o.total)}</b>`
+    : `Paid via <b>${paymentLabel(o.payment)}</b>`
   const body = `
-    <p style="font-size:14px;line-height:1.6;">Hi ${o.customerName}, thank you for your order! 🎀 We’ve received it and will start preparing it right away.</p>
-    <p style="font-size:14px;margin:6px 0 2px;"><b>Order number:</b> <span style="color:${ROSE};font-weight:700;">${o.id}</span></p>
-    <p style="font-size:13px;color:#7a7080;margin:0 0 14px;">Payment: ${o.payment.toUpperCase()} · Shipping to: ${o.customerAddress}, ${o.customerCity}</p>
+    <p style="font-size:14px;line-height:1.6;">Hi ${o.customerName}, thank you for your order! 🎀 We’ve received it and will start preparing it right away. Your invoice is below.</p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:13px;color:#7a7080;margin:4px 0 10px;">
+      <tr>
+        <td style="vertical-align:top;">
+          <div style="text-transform:uppercase;letter-spacing:.06em;font-size:11px;color:#9a929c;">Invoice</div>
+          <div style="color:${ROSE};font-weight:700;font-size:15px;">#${o.id}</div>
+        </td>
+        <td style="vertical-align:top;text-align:right;">
+          <div>${paymentLabel(o.payment)}</div>
+          <div>Ship to: ${o.customerAddress}, ${o.customerCity}</div>
+        </td>
+      </tr>
+    </table>
     ${orderTable(o)}
-    <div style="margin:22px 0 6px;">${button(`${app}/track`, 'Track your order')}</div>`
-  return { to, subject: `Order confirmed — ${o.id} · ${store}`, html: layout('Your order is confirmed! 🎀', body, `Order ${o.id} confirmed`) }
+    <p style="font-size:13px;color:#7a7080;margin:12px 0 4px;">${paid}</p>
+    <div style="margin:22px 0 6px;">${button(`${app}/orders/${o.id}/invoice`, 'View / download invoice')}</div>
+    <p style="font-size:13px;margin:10px 0 0;"><a href="${app}/track" style="color:${ROSE};text-decoration:none;">Track your order →</a></p>`
+  return { to, subject: `Your invoice for order ${o.id} · ${store}`, html: layout('Your order is confirmed! 🎀', body, `Invoice for order ${o.id}`) }
 }
 
 export function orderStatusEmail(to: string, o: OrderEmailData, status: string): MailInput {

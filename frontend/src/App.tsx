@@ -20,6 +20,7 @@ import ResetPasswordPage from './pages/ResetPasswordPage'
 import AccountPage from './pages/AccountPage'
 import OrdersPage from './pages/OrdersPage'
 import OrderDetailPage from './pages/OrderDetailPage'
+import OrderInvoicePage from './pages/OrderInvoicePage'
 import TrackOrderPage from './pages/TrackOrderPage'
 import PromotionPage from './pages/PromotionPage'
 import { ShippingPage, ReturnsPage, PrivacyPage, NotFoundPage } from './pages/InfoPages'
@@ -59,6 +60,7 @@ export default function App() {
         <Route path="/account" element={<RequireAuth><AccountPage /></RequireAuth>} />
         <Route path="/orders" element={<RequireAuth><OrdersPage /></RequireAuth>} />
         <Route path="/orders/:id" element={<RequireAuth><OrderDetailPage /></RequireAuth>} />
+        <Route path="/orders/:id/invoice" element={<RequireAuth><OrderInvoicePage /></RequireAuth>} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/faq" element={<FaqPage />} />

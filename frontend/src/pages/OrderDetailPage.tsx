@@ -3,8 +3,10 @@ import { Link, useParams } from 'react-router-dom'
 import { orders as orderApi, type Order } from '../services/db'
 import { formatPrice, useStore } from '../store/StoreContext'
 import StatusTimeline from '../components/StatusTimeline'
+import { usePageMeta } from '../hooks/usePageMeta'
 
 export default function OrderDetailPage() {
+  usePageMeta({ title: 'Order details', noindex: true })
   const { id } = useParams()
   const { notify, reorder } = useStore()
   const [order, setOrder] = useState<Order | null | undefined>(undefined)
@@ -61,7 +63,10 @@ export default function OrderDetailPage() {
           <h1>Order #{order.id}</h1>
           <p>Placed on {new Date(order.createdAt).toLocaleString()}</p>
         </div>
-        <button type="button" className="btn btn-outline" onClick={() => reorder(order.items)}>↻ Buy again</button>
+        <div className="order-detail-actions">
+          <Link to={`/orders/${order.id}/invoice`} className="btn btn-outline">🧾 Invoice</Link>
+          <button type="button" className="btn btn-outline" onClick={() => reorder(order.items)}>↻ Buy again</button>
+        </div>
       </div>
 
       <section className="account-card">
