@@ -3,10 +3,12 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../store/AuthContext'
 import { useStore } from '../store/StoreContext'
 import type { Address } from '../services/db'
+import { usePageMeta } from '../hooks/usePageMeta'
 
 const emptyAddr: Address = { label: 'Home', name: '', phone: '', address: '', city: 'Dhaka' }
 
 export default function AccountPage() {
+  usePageMeta({ title: 'My Account', noindex: true })
   const { user, logout, updateProfile, saveAddress, removeAddress } = useAuth()
   const { notify, wishlist } = useStore()
   const [profile, setProfile] = useState({ name: user?.name ?? '', phone: user?.phone ?? '' })

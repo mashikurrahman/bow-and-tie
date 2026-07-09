@@ -1,5 +1,6 @@
 import { useRef } from 'react'
 import { Link } from 'react-router-dom'
+import { usePageMeta } from '../hooks/usePageMeta'
 import { testimonials, trustPoints } from '../data'
 import { formatPrice, useStore } from '../store/StoreContext'
 import { useProducts } from '../store/ProductsContext'
@@ -18,6 +19,7 @@ const collections = [
 ]
 
 export default function HomePage() {
+  usePageMeta({ description: 'Shop handcrafted boutique hair bows, clips, silk pieces and custom accessories — made with love in Dhaka, Bangladesh.', canonicalPath: '/' })
   const { addToCart } = useStore()
   const { products } = useProducts()
   const scrollRef = useRef<HTMLDivElement>(null)

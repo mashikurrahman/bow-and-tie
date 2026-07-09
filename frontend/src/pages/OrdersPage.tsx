@@ -3,8 +3,10 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../store/AuthContext'
 import { orders as orderApi, type Order } from '../services/db'
 import { formatPrice, useStore } from '../store/StoreContext'
+import { usePageMeta } from '../hooks/usePageMeta'
 
 export default function OrdersPage() {
+  usePageMeta({ title: 'My Orders', noindex: true })
   const { user } = useAuth()
   const { reorder } = useStore()
   const [list, setList] = useState<Order[] | null>(null)

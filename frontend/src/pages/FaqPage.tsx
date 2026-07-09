@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { faqs } from '../data'
+import { usePageMeta } from '../hooks/usePageMeta'
 
 export default function FaqPage() {
+  usePageMeta({ title: 'FAQ', description: 'Answers to common questions about orders, shipping, returns and custom hair accessories at Bow & Tie.' })
   const [open, setOpen] = useState<number | null>(0)
   return (
     <div className="page narrow">

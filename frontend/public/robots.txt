@@ -1,0 +1,16 @@
+# Bow & Tie — storefront robots
+# Update the Sitemap domain below to your live storefront domain before launch.
+User-agent: *
+Allow: /
+
+# Keep private / account pages out of search
+Disallow: /checkout
+Disallow: /cart
+Disallow: /account
+Disallow: /orders
+Disallow: /login
+Disallow: /wishlist
+Disallow: /reset-password
+Disallow: /forgot-password
+
+Sitemap: https://bowandtie.com/sitemap.xml

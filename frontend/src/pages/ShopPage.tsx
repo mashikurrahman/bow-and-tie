@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { usePageMeta } from '../hooks/usePageMeta'
 import { categories } from '../data'
 import { useProducts } from '../store/ProductsContext'
 import ProductCard from '../components/ProductCard'
@@ -7,6 +8,7 @@ import ProductCard from '../components/ProductCard'
 type Sort = 'featured' | 'price-asc' | 'price-desc' | 'rating'
 
 export default function ShopPage() {
+  usePageMeta({ title: 'Shop All Hair Accessories', description: 'Browse all handcrafted bows, clips, silk pieces and sets. Filter by category to find your perfect piece.' })
   const { products } = useProducts()
   const [params, setParams] = useSearchParams()
   const query = params.get('q') ?? ''

@@ -3,8 +3,10 @@ import { useSearchParams } from 'react-router-dom'
 import { orders as orderApi, type Order } from '../services/db'
 import { formatPrice } from '../store/StoreContext'
 import StatusTimeline from '../components/StatusTimeline'
+import { usePageMeta } from '../hooks/usePageMeta'
 
 export default function TrackOrderPage() {
+  usePageMeta({ title: 'Track Your Order', description: 'Track your Bow & Tie order status with your order number.' })
   const [params] = useSearchParams()
   const [query, setQuery] = useState(params.get('id') ?? '')
   const [order, setOrder] = useState<Order | null | undefined>(undefined)

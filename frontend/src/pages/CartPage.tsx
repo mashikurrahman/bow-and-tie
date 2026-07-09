@@ -7,8 +7,10 @@ import {
   useStore,
 } from '../store/StoreContext'
 import { useProducts } from '../store/ProductsContext'
+import { usePageMeta } from '../hooks/usePageMeta'
 
 export default function CartPage() {
+  usePageMeta({ title: 'Your Cart', noindex: true })
   const { cart, changeQuantity, removeFromCart, subtotal } = useStore()
   const { products } = useProducts()
   const shipping = subtotal === 0 || subtotal > FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FLAT

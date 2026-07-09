@@ -2,8 +2,10 @@ import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { auth } from '../services/db'
 import { useStore } from '../store/StoreContext'
+import { usePageMeta } from '../hooks/usePageMeta'
 
 export default function ResetPasswordPage() {
+  usePageMeta({ title: 'Reset Password', noindex: true })
   const [params] = useSearchParams()
   const id = params.get('id') ?? ''
   const token = params.get('token') ?? ''

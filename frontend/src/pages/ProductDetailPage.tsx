@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { formatPrice, useStore } from '../store/StoreContext'
 import { useProducts } from '../store/ProductsContext'
@@ -28,7 +28,36 @@ export default function ProductDetailPage() {
   const [notified, setNotified] = useState(false)
   const [notifyBusy, setNotifyBusy] = useState(false)
 
-  usePageMeta(product?.name, product?.description)
+  const seo = useMemo(() => {
+    if (!product) return { noindex: true }
+    const price = product.sale ? product.sale.price : product.price
+    return {
+      title: product.name,
+      description: product.description,
+      image: product.image,
+      type: 'product' as const,
+      canonicalPath: `/product/${product.id}`,
+      jsonLd: {
+        '@context': 'https://schema.org',
+        '@type': 'Product',
+        name: product.name,
+        image: [product.image],
+        description: product.description,
+        category: product.category,
+        brand: { '@type': 'Brand', name: 'Bow & Tie' },
+        offers: {
+          '@type': 'Offer',
+          priceCurrency: 'BDT',
+          price,
+          availability: product.inStock ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+        },
+        ...(product.reviews
+          ? { aggregateRating: { '@type': 'AggregateRating', ratingValue: product.rating, reviewCount: product.reviews } }
+          : {}),
+      },
+    }
+  }, [product])
+  usePageMeta(seo)
 
   // Record this view for the "Recently Viewed" row.
   useEffect(() => {

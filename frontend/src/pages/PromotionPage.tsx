@@ -3,11 +3,17 @@ import { Link, useParams } from 'react-router-dom'
 import { promotions as promoApi, type Promotion } from '../services/promotions'
 import type { Product } from '../data'
 import ProductCard from '../components/ProductCard'
+import { usePageMeta } from '../hooks/usePageMeta'
 
 export default function PromotionPage() {
   const { id } = useParams()
   const [promo, setPromo] = useState<Promotion | null | undefined>(undefined)
   const [products, setProducts] = useState<Product[]>([])
+
+  usePageMeta({
+    title: promo?.title ?? 'Sale',
+    description: promo?.description || 'Limited-time offers on handcrafted hair accessories at Bow & Tie.',
+  })
 
   useEffect(() => {
     if (!id) return

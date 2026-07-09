@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { usePageMeta } from '../hooks/usePageMeta'
 
 function InfoLayout({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -10,6 +11,7 @@ function InfoLayout({ title, children }: { title: string; children: React.ReactN
 }
 
 export function ShippingPage() {
+  usePageMeta({ title: 'Shipping Information', description: 'Delivery areas, times and charges for Bow & Tie orders across Bangladesh. Free delivery over ৳2,500.' })
   return (
     <InfoLayout title="Shipping Information">
       <h3>Delivery Areas & Time</h3>
@@ -25,6 +27,7 @@ export function ShippingPage() {
 }
 
 export function ReturnsPage() {
+  usePageMeta({ title: 'Returns & Exchanges', description: 'Bow & Tie’s returns and exchanges policy — 7-day peace of mind on eligible items.' })
   return (
     <InfoLayout title="Returns & Exchanges">
       <h3>7-Day Peace of Mind</h3>
@@ -38,6 +41,7 @@ export function ReturnsPage() {
 }
 
 export function PrivacyPage() {
+  usePageMeta({ title: 'Privacy Policy', description: 'How Bow & Tie collects, uses and protects your information.' })
   return (
     <InfoLayout title="Privacy Policy">
       <p>Your privacy matters to us. This is a summary of how we handle your information.</p>
@@ -52,6 +56,7 @@ export function PrivacyPage() {
 }
 
 export function NotFoundPage() {
+  usePageMeta({ title: '404 — Page Not Found', noindex: true })
   return (
     <div className="page empty-state">
       <div className="cart-empty-icon">🎀</div>

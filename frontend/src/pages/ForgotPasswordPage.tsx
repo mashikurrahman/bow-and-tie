@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { auth } from '../services/db'
+import { usePageMeta } from '../hooks/usePageMeta'
 
 export default function ForgotPasswordPage() {
+  usePageMeta({ title: 'Forgot Password', noindex: true })
   const [email, setEmail] = useState('')
   const [sent, setSent] = useState(false)
   const [busy, setBusy] = useState(false)

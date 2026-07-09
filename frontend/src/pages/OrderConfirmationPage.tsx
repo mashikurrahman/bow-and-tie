@@ -3,8 +3,10 @@ import { Link } from 'react-router-dom'
 import { formatPrice } from '../store/StoreContext'
 import { orders as orderApi, type Order } from '../services/db'
 import { useAuth } from '../store/AuthContext'
+import { usePageMeta } from '../hooks/usePageMeta'
 
 export default function OrderConfirmationPage() {
+  usePageMeta({ title: 'Order Confirmed', noindex: true })
   const { isAuthed } = useAuth()
   const [order, setOrder] = useState<Order | null | undefined>(undefined)
 

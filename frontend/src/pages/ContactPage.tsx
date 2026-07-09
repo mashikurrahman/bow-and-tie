@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { whatsappNumber } from '../data'
 import { useStore } from '../store/StoreContext'
+import { usePageMeta } from '../hooks/usePageMeta'
 
 export default function ContactPage() {
+  usePageMeta({ title: 'Contact Us', description: 'Questions about orders, custom pieces or wholesale? Get in touch with Bow & Tie — we’d love to hear from you.' })
   const { notify } = useStore()
   const [form, setForm] = useState({ name: '', email: '', message: '' })
   const [sent, setSent] = useState(false)

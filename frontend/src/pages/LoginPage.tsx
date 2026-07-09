@@ -3,8 +3,10 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../store/AuthContext'
 import { useStore } from '../store/StoreContext'
 import SocialLogin from '../components/SocialLogin'
+import { usePageMeta } from '../hooks/usePageMeta'
 
 export default function LoginPage() {
+  usePageMeta({ title: 'Sign In', noindex: true })
   const { login, register } = useAuth()
   const { notify } = useStore()
   const navigate = useNavigate()

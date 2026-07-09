@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { whatsappNumber } from '../data'
 import { formatPrice, useStore } from '../store/StoreContext'
+import { usePageMeta } from '../hooks/usePageMeta'
 
 export default function CustomOrderPage() {
+  usePageMeta({ title: 'Custom Orders', description: 'Order custom-made hair bows and accessories — choose your fabric, colour and name. Handcrafted just for you in Dhaka.' })
   const { notify } = useStore()
   const [form, setForm] = useState({
     name: '',

@@ -12,10 +12,12 @@ import {
 import { useProducts } from '../store/ProductsContext'
 import { useAuth } from '../store/AuthContext'
 import { orders as orderApi, type OrderItem } from '../services/db'
+import { usePageMeta } from '../hooks/usePageMeta'
 
 type Payment = 'cod' | 'bkash' | 'nagad'
 
 export default function CheckoutPage() {
+  usePageMeta({ title: 'Checkout', noindex: true })
   const { cart, subtotal, clearCart, applyPromo, notify } = useStore()
   const { products } = useProducts()
   const { user } = useAuth()

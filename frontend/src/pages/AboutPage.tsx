@@ -1,7 +1,9 @@
 import { Link } from 'react-router-dom'
 import { trustPoints } from '../data'
+import { usePageMeta } from '../hooks/usePageMeta'
 
 export default function AboutPage() {
+  usePageMeta({ title: 'About Us', description: 'The story behind Bow & Tie — handcrafted boutique hair accessories made with love in Dhaka, Bangladesh.' })
   return (
     <div className="page">
       <div className="page-head">

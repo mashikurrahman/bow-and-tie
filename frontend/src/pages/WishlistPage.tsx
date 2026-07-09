@@ -2,8 +2,10 @@ import { Link } from 'react-router-dom'
 import { effectivePrice, formatPrice, useStore } from '../store/StoreContext'
 import { useProducts } from '../store/ProductsContext'
 import ProductCard from '../components/ProductCard'
+import { usePageMeta } from '../hooks/usePageMeta'
 
 export default function WishlistPage() {
+  usePageMeta({ title: 'My Wishlist', noindex: true })
   const { wishlist, wishlistPriceWhenAdded } = useStore()
   const { products } = useProducts()
   const items = products.filter((p) => wishlist.includes(p.id))

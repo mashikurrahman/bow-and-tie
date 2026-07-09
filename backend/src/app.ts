@@ -14,6 +14,7 @@ import uploadRoutes, { customerUploadRouter } from './routes/upload'
 import promotionRoutes from './routes/promotions'
 import cartRoutes from './routes/cart'
 import newsletterRoutes from './routes/newsletter'
+import sitemapRoutes from './routes/sitemap'
 
 export function createApp() {
   const app = express()
@@ -46,6 +47,9 @@ export function createApp() {
   app.use('/api', apiLimiter)
 
   app.get('/api/health', (_req, res) => res.json({ ok: true, service: 'bow-and-tie-api' }))
+
+  // SEO: dynamic sitemap.xml + robots.txt (served at root for crawlers).
+  app.use('/', sitemapRoutes)
 
   // Serve uploaded product images.
   app.use('/uploads', express.static(path.resolve(process.cwd(), 'uploads')))
