@@ -2,9 +2,17 @@ import 'dotenv/config'
 
 export const config = {
   port: Number(process.env.PORT ?? 4000),
+  isProduction: process.env.NODE_ENV === 'production',
   jwtSecret: process.env.JWT_SECRET ?? 'dev-insecure-secret-change-me',
   jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? '7d',
   corsOrigin: process.env.CORS_ORIGIN ?? 'http://localhost:5173',
+  // Allowed browser origins (comma-separated in CORS_ORIGIN for multiple, e.g.
+  // "https://bowandtie.com,https://www.bowandtie.com"). In dev any localhost
+  // port is also allowed; in production only these origins are.
+  corsOrigins: (process.env.CORS_ORIGIN ?? 'http://localhost:5173')
+    .split(',')
+    .map((o) => o.trim().replace(/\/$/, ''))
+    .filter(Boolean),
   // Absolute base URL of this API, used to build public upload links.
   publicUrl: process.env.PUBLIC_URL ?? `http://localhost:${process.env.PORT ?? 4000}`,
   // Public storefront URL, used to build links inside emails (reset, orders…).
