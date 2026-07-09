@@ -68,6 +68,25 @@ export type Stats = {
   recentOrders: Order[]
 }
 
+export type Staff = {
+  id: string
+  name: string
+  email: string
+  role: string
+  permissions: string[]
+  createdAt: string
+}
+
+export type AdminQuestion = {
+  id: string
+  productId: string
+  productName: string
+  name: string
+  question: string
+  answer: string | null
+  createdAt: string
+}
+
 export type Customer = {
   id: string
   name: string
@@ -99,8 +118,48 @@ export type ProductInput = {
   featured: boolean
 }
 
+// Bulk import (CSV / Excel / PDF)
+export type ImportRowPreview = {
+  row: number
+  valid: boolean
+  action: 'create' | 'update' | 'skip'
+  id: string
+  data: ProductInput & Record<string, unknown>
+  errors: string[]
+}
+export type ImportPreview = {
+  rows: ImportRowPreview[]
+  summary: { total: number; valid: number; invalid: number; toCreate: number; toUpdate: number }
+}
+export type ImportResult = {
+  created: number
+  updated: number
+  failed: { name: string; error: string }[]
+}
+
+// Reports
+export type ReportRow = { id: string; name: string; category: string; qty: number; revenue: number; profit: number }
+export type CategoryRow = { category: string; qty: number; revenue: number; profit: number }
+export type Report = {
+  range: { from: string; to: string }
+  summary: {
+    orderCount: number; unitsSold: number; productSales: number; cogs: number
+    grossProfit: number; margin: number; orderTotal: number; discounts: number; avgOrderValue: number
+  }
+  byProduct: ReportRow[]
+  byCategory: CategoryRow[]
+}
+
 export const admin = {
   stats: () => api.get<Stats>('/admin/stats'),
+
+  report: (from?: string, to?: string) => {
+    const qs = new URLSearchParams()
+    if (from) qs.set('from', from)
+    if (to) qs.set('to', to)
+    const s = qs.toString()
+    return api.get<Report>(`/admin/reports${s ? `?${s}` : ''}`)
+  },
 
   listOrders: (params: { status?: string; q?: string } = {}) => {
     const qs = new URLSearchParams()
@@ -115,6 +174,10 @@ export const admin = {
   updateOrderStatus: (id: string, status: OrderStatus) =>
     patch<{ order: Order }>(`/admin/orders/${id}/status`, { status }),
 
+  getOrder: (id: string) => api.get<{ order: Order }>(`/admin/orders/${id}`),
+  shipOrder: (id: string, provider: 'pathao' | 'steadfast' | 'redx') =>
+    api.post<{ order: Order; tracking: { trackingCode: string; mock: boolean } }>(`/admin/orders/${id}/ship`, { provider }),
+
   listProducts: () => api.get<{ products: AdminProduct[] }>('/admin/products'),
   createProduct: (data: ProductInput) => api.post<{ product: AdminProduct }>('/admin/products', data),
   updateProduct: (id: string, data: ProductInput) =>
@@ -122,6 +185,20 @@ export const admin = {
   deleteProduct: (id: string) => api.del<{ ok: boolean }>(`/admin/products/${id}`),
 
   listCustomers: () => api.get<{ customers: Customer[] }>('/admin/customers'),
+
+  // Staff & permissions
+  listStaff: () => api.get<{ staff: Staff[]; sections: string[] }>('/admin/staff'),
+  createStaff: (data: { name: string; email: string; password: string; permissions: string[] }) =>
+    api.post<{ staff: Staff }>('/admin/staff', data),
+  updateStaff: (id: string, data: { name?: string; permissions?: string[]; password?: string }) =>
+    api.put<{ staff: Staff }>(`/admin/staff/${id}`, data),
+  deleteStaff: (id: string) => api.del<{ ok: boolean }>(`/admin/staff/${id}`),
+
+  // Product Q&A
+  listQuestions: () => api.get<{ questions: AdminQuestion[] }>('/admin/questions'),
+  answerQuestion: (id: string, answer: string) =>
+    api.put<{ question: { id: string; answer: string } }>(`/admin/questions/${id}`, { answer }),
+  deleteQuestion: (id: string) => api.del<{ ok: boolean }>(`/admin/questions/${id}`),
 
   // Promotions
   listPromotions: () => api.get<{ promotions: Promotion[] }>('/admin/promotions'),
@@ -150,6 +227,24 @@ export const admin = {
     if (!res.ok) throw new Error((data as { error?: string }).error || 'Upload failed')
     return (data as { url: string }).url
   },
+
+  // Bulk import: upload a CSV/Excel/PDF and get a validated preview (nothing saved yet).
+  async importProducts(file: File): Promise<ImportPreview> {
+    const form = new FormData()
+    form.append('file', file)
+    const res = await fetch(`${BASE}/admin/products/import`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${getToken()}` },
+      body: form,
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) throw new Error((data as { error?: string }).error || 'Import failed')
+    return data as ImportPreview
+  },
+
+  // Commit the confirmed rows to the store.
+  commitImport: (rows: unknown[]) =>
+    api.post<ImportResult>('/admin/products/import/commit', { rows }),
 }
 
 // Minimal PATCH helper (the shared api client only exposes get/post/put/del).

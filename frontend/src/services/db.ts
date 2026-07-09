@@ -2,7 +2,9 @@
 // Data service — talks to the real backend API (Node + Express + Prisma).
 // Types are kept identical to what the UI already consumes.
 // ---------------------------------------------------------------------------
-import { api, clearToken, setToken } from './api'
+import { api, clearToken, getToken, setToken } from './api'
+
+const BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:4000/api'
 
 export type Address = {
   id?: string
@@ -19,6 +21,7 @@ export type User = {
   email: string
   phone?: string
   role: string
+  permissions?: string[]
   addresses: Address[]
   createdAt: string
 }
@@ -33,7 +36,14 @@ export type OrderItem = {
   size?: string
 }
 
-export type OrderStatus = 'Processing' | 'Confirmed' | 'Shipped' | 'Delivered' | 'Cancelled'
+export type OrderStatus =
+  | 'Processing'
+  | 'Confirmed'
+  | 'Shipped'
+  | 'Delivered'
+  | 'Cancelled'
+  | 'Return Requested'
+  | 'Returned'
 
 export type Order = {
   id: string
@@ -44,6 +54,9 @@ export type Order = {
   shipping: number
   total: number
   customer: Address
+  deliveryZone?: 'inside' | 'outside'
+  courier?: string
+  trackingCode?: string
   payment: 'cod' | 'bkash' | 'nagad'
   txnId?: string
   notes?: string
@@ -67,6 +80,15 @@ export const auth = {
     const { token, user } = await api.post<{ token: string; user: User }>('/auth/login', {
       email,
       password,
+    })
+    setToken(token)
+    return user
+  },
+
+  async oauth(provider: 'google' | 'facebook', providerToken: string): Promise<User> {
+    const { token, user } = await api.post<{ token: string; user: User }>('/auth/oauth', {
+      provider,
+      token: providerToken,
     })
     setToken(token)
     return user
@@ -105,12 +127,21 @@ export const auth = {
   async changePassword(oldPassword: string, newPassword: string): Promise<void> {
     await api.put('/account/password', { oldPassword, newPassword })
   },
+
+  async forgotPassword(email: string): Promise<void> {
+    await api.post('/auth/forgot-password', { email })
+  },
+
+  async resetPassword(id: string, token: string, password: string): Promise<void> {
+    await api.post('/auth/reset-password', { id, token, password })
+  },
 }
 
 // ----- Orders -------------------------------------------------------------
 export type CreateOrderInput = {
   items: { productId: string; quantity: number; color?: string; size?: string }[]
-  customer: { name: string; phone: string; address: string; city: string }
+  customer: { name: string; email?: string; phone: string; address: string; city: string }
+  deliveryZone?: 'inside' | 'outside'
   payment: 'cod' | 'bkash' | 'nagad'
   txnId?: string
   notes?: string
@@ -120,6 +151,16 @@ export type CreateOrderInput = {
 export const orders = {
   async create(input: CreateOrderInput): Promise<Order> {
     const { order } = await api.post<{ order: Order }>('/orders', input)
+    return order
+  },
+
+  async cancel(id: string): Promise<Order> {
+    const { order } = await api.post<{ order: Order }>(`/orders/${id}/cancel`)
+    return order
+  },
+
+  async requestReturn(id: string, reason?: string): Promise<Order> {
+    const { order } = await api.post<{ order: Order }>(`/orders/${id}/return`, { reason })
     return order
   },
 
@@ -144,5 +185,85 @@ export const orders = {
     } catch {
       return null
     }
+  },
+}
+
+// ----- Reviews ------------------------------------------------------------
+export type Review = {
+  name: string
+  rating: number
+  title: string
+  date: string
+  text: string
+  images: string[]
+  verified: boolean
+}
+
+export const reviews = {
+  async list(productId: string): Promise<Review[]> {
+    const { reviews } = await api.get<{ reviews: Review[] }>(`/products/${productId}/reviews`)
+    return reviews
+  },
+  async add(
+    productId: string,
+    input: { rating: number; title: string; text: string; images: string[] },
+  ): Promise<Review[]> {
+    const { reviews } = await api.post<{ reviews: Review[] }>(`/products/${productId}/reviews`, input)
+    return reviews
+  },
+  // Upload a review photo (any logged-in customer) -> returns its URL.
+  async uploadImage(file: File): Promise<string> {
+    const form = new FormData()
+    form.append('image', file)
+    const res = await fetch(`${BASE}/upload`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${getToken()}` },
+      body: form,
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) throw new Error((data as { error?: string }).error || 'Upload failed')
+    return (data as { url: string }).url
+  },
+}
+
+// ----- Product Q&A --------------------------------------------------------
+export type Question = { id: string; name: string; question: string; answer: string | null; date: string }
+
+export const questions = {
+  async list(productId: string): Promise<Question[]> {
+    const { questions } = await api.get<{ questions: Question[] }>(`/products/${productId}/questions`)
+    return questions
+  },
+  async ask(productId: string, question: string): Promise<void> {
+    await api.post(`/products/${productId}/questions`, { question })
+  },
+}
+
+// ----- Back-in-stock alerts ----------------------------------------------
+export const stockAlerts = {
+  async notifyMe(productId: string, email: string): Promise<void> {
+    await api.post(`/products/${productId}/notify-me`, { email })
+  },
+}
+
+// ----- Abandoned-cart tracking -------------------------------------------
+export const cartTracking = {
+  async track(input: {
+    email?: string
+    items: { name: string; quantity: number; price: number; image?: string }[]
+    total: number
+  }): Promise<void> {
+    try {
+      await api.post('/cart/track', input)
+    } catch {
+      /* non-critical — ignore */
+    }
+  },
+}
+
+// ----- Newsletter ---------------------------------------------------------
+export const newsletter = {
+  async subscribe(email: string): Promise<{ code: string }> {
+    return api.post<{ ok: boolean; code: string }>('/newsletter/subscribe', { email })
   },
 }

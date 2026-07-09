@@ -8,8 +8,10 @@ import productRoutes from './routes/products'
 import orderRoutes from './routes/orders'
 import accountRoutes from './routes/account'
 import adminRoutes from './routes/admin'
-import uploadRoutes from './routes/upload'
+import uploadRoutes, { customerUploadRouter } from './routes/upload'
 import promotionRoutes from './routes/promotions'
+import cartRoutes from './routes/cart'
+import newsletterRoutes from './routes/newsletter'
 
 export function createApp() {
   const app = express()
@@ -38,8 +40,11 @@ export function createApp() {
   app.use('/api/products', productRoutes)
   app.use('/api/promotions', promotionRoutes)
   app.use('/api/orders', orderRoutes)
+  app.use('/api/cart', cartRoutes)
+  app.use('/api/newsletter', newsletterRoutes)
   app.use('/api/account', accountRoutes)
   app.use('/api/admin/upload', uploadRoutes)
+  app.use('/api/upload', customerUploadRouter)
   app.use('/api/admin', adminRoutes)
 
   app.use(notFound)

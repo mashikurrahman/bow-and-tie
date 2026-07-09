@@ -1,8 +1,11 @@
 export type Review = {
   name: string
   rating: number
+  title?: string
   date: string
   text: string
+  images?: string[]
+  verified?: boolean
 }
 
 export type Product = {

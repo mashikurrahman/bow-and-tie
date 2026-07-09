@@ -4,18 +4,26 @@ import { useAuth } from '../store/AuthContext'
 import './admin.css'
 
 const nav = [
-  { to: '/admin', label: 'Dashboard', end: true, icon: '▦' },
-  { to: '/admin/products', label: 'Products', icon: '🏷️' },
-  { to: '/admin/orders', label: 'Orders', icon: '🧾' },
-  { to: '/admin/customers', label: 'Customers', icon: '👥' },
-  { to: '/admin/promotions', label: 'Promotions', icon: '🎯' },
-  { to: '/admin/coupons', label: 'Coupons', icon: '🎟️' },
+  { to: '/admin', label: 'Dashboard', end: true, icon: '▦', perm: 'dashboard' },
+  { to: '/admin/products', label: 'Products', icon: '🏷️', perm: 'products' },
+  { to: '/admin/import', label: 'Bulk Import', icon: '📦', perm: 'import' },
+  { to: '/admin/orders', label: 'Orders', icon: '🧾', perm: 'orders' },
+  { to: '/admin/customers', label: 'Customers', icon: '👥', perm: 'customers' },
+  { to: '/admin/reports', label: 'Reports', icon: '📈', perm: 'reports' },
+  { to: '/admin/promotions', label: 'Promotions', icon: '🎯', perm: 'promotions' },
+  { to: '/admin/coupons', label: 'Coupons', icon: '🎟️', perm: 'coupons' },
+  { to: '/admin/questions', label: 'Q&A', icon: '💬', perm: 'questions' },
 ]
 
 export default function AdminLayout() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
+
+  const perms = user?.permissions ?? []
+  const isAdmin = user?.role === 'admin'
+  const can = (p: string) => isAdmin || perms.includes(p)
+  const visibleNav = nav.filter((n) => can(n.perm))
 
   const doLogout = () => {
     logout()
@@ -40,7 +48,7 @@ export default function AdminLayout() {
 
         <nav className="admin-nav">
           <span className="admin-nav-section">General</span>
-          {nav.map((n) => (
+          {visibleNav.map((n) => (
             <NavLink
               key={n.to}
               to={n.to}
@@ -53,6 +61,16 @@ export default function AdminLayout() {
             </NavLink>
           ))}
           <span className="admin-nav-section">Tools</span>
+          {isAdmin && (
+            <NavLink
+              to="/admin/staff"
+              className={({ isActive }) => `admin-nav-item ${isActive ? 'active' : ''}`}
+              onClick={() => setOpen(false)}
+            >
+              <span className="admin-nav-icon">🛡️</span>
+              Staff &amp; Roles
+            </NavLink>
+          )}
           <NavLink
             to="/admin/settings"
             className={({ isActive }) => `admin-nav-item ${isActive ? 'active' : ''}`}

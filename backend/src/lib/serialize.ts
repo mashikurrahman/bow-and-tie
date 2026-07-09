@@ -30,12 +30,18 @@ export function serializeProduct(p: Product & { reviews?: Review[] }) {
     inStock: p.inStock,
     featured: p.featured,
     stock: p.stock,
-    reviewList: (p.reviews ?? []).map((r) => ({
-      name: r.name,
-      rating: r.rating,
-      date: r.date,
-      text: r.text,
-    })),
+    reviewList: (p.reviews ?? [])
+      .slice()
+      .sort((a, b) => (b.createdAt?.getTime?.() ?? 0) - (a.createdAt?.getTime?.() ?? 0))
+      .map((r) => ({
+        name: r.name,
+        rating: r.rating,
+        title: r.title ?? '',
+        date: r.date,
+        text: r.text,
+        images: parseArr(r.images ?? '[]'),
+        verified: r.verified ?? false,
+      })),
   }
 }
 
@@ -68,6 +74,9 @@ export function serializeOrder(o: Order & { items?: OrderItem[] }) {
       address: o.customerAddress,
       city: o.customerCity,
     },
+    deliveryZone: o.deliveryZone,
+    courier: o.courier ?? undefined,
+    trackingCode: o.trackingCode ?? undefined,
     payment: o.payment,
     txnId: o.txnId ?? undefined,
     notes: o.notes ?? undefined,

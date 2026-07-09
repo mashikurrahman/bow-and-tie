@@ -27,13 +27,17 @@ const upload = multer({
   },
 })
 
-const router = Router()
-
-// POST /api/admin/upload  (field name: "image") -> { url }
-router.post('/', requireAuth, requireAdmin, upload.single('image'), (req, res) => {
+const handleUpload = (req: import('express').Request, res: import('express').Response) => {
   if (!req.file) return res.status(400).json({ error: 'No image uploaded (png/jpg/svg/webp, max 4MB)' })
   const url = `${config.publicUrl}/uploads/${req.file.filename}`
   res.status(201).json({ url })
-})
+}
 
+// Admin uploads (products, banners) — POST /api/admin/upload
+const router = Router()
+router.post('/', requireAuth, requireAdmin, upload.single('image'), handleUpload)
 export default router
+
+// Customer uploads (e.g. review photos) — POST /api/upload (any logged-in user)
+export const customerUploadRouter = Router()
+customerUploadRouter.post('/', requireAuth, upload.single('image'), handleUpload)

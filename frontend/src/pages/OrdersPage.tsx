@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../store/AuthContext'
 import { orders as orderApi, type Order } from '../services/db'
-import { formatPrice } from '../store/StoreContext'
+import { formatPrice, useStore } from '../store/StoreContext'
 
 export default function OrdersPage() {
   const { user } = useAuth()
+  const { reorder } = useStore()
   const [list, setList] = useState<Order[] | null>(null)
 
   useEffect(() => {
@@ -32,17 +33,22 @@ export default function OrdersPage() {
       <div className="page-head"><h1>My Orders</h1><p>{list.length} order{list.length !== 1 ? 's' : ''}</p></div>
       <div className="order-list">
         {list.map((o) => (
-          <Link to={`/orders/${o.id}`} className="order-row" key={o.id}>
-            <div className="order-row-imgs">
-              {o.items.slice(0, 3).map((it, i) => <img key={i} src={it.image} alt={it.name} />)}
-            </div>
-            <div className="order-row-main">
-              <strong>#{o.id}</strong>
-              <span className="muted">{new Date(o.createdAt).toLocaleDateString()} · {o.items.length} item{o.items.length !== 1 ? 's' : ''}</span>
-            </div>
-            <span className={`status-pill status-${o.status.toLowerCase()}`}>{o.status}</span>
-            <strong className="order-row-total">{formatPrice(o.total)}</strong>
-          </Link>
+          <div className="order-row" key={o.id}>
+            <Link to={`/orders/${o.id}`} className="order-row-link">
+              <div className="order-row-imgs">
+                {o.items.slice(0, 3).map((it, i) => <img key={i} src={it.image} alt={it.name} />)}
+              </div>
+              <div className="order-row-main">
+                <strong>#{o.id}</strong>
+                <span className="muted">{new Date(o.createdAt).toLocaleDateString()} · {o.items.length} item{o.items.length !== 1 ? 's' : ''}</span>
+              </div>
+              <span className={`status-pill status-${o.status.toLowerCase()}`}>{o.status}</span>
+              <strong className="order-row-total">{formatPrice(o.total)}</strong>
+            </Link>
+            <button type="button" className="btn btn-sm btn-outline order-reorder" onClick={() => reorder(o.items)}>
+              ↻ Buy again
+            </button>
+          </div>
         ))}
       </div>
     </div>

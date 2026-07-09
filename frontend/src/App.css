@@ -836,20 +836,21 @@
 .cart-panel {
   position: fixed;
   top: 0;
-  right: -440px;
-  width: 420px;
+  right: 0;
+  width: min(420px, 100vw);
   height: 100vh;
   background: #fff;
   z-index: 201;
   box-shadow: -8px 0 30px rgba(0,0,0,0.1);
-  transition: right 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: translateX(100%);
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
   display: flex;
   flex-direction: column;
 }
 
 .cart-overlay.open + .cart-panel,
 .cart-panel.open {
-  right: 0;
+  transform: translateX(0);
 }
 
 .cart-panel-header {
@@ -1172,8 +1173,27 @@
     display: none;
   }
 
+  /* Footer: brand on top, link groups in two compact columns (was one long column). */
+  .footer {
+    padding: 40px 24px 28px;
+  }
+
   .footer-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
+    gap: 26px 20px;
+    margin-bottom: 28px;
+  }
+
+  .footer-brand {
+    grid-column: 1 / -1;
+  }
+
+  .footer-brand p {
+    max-width: none;
+  }
+
+  .footer-col a {
+    margin-bottom: 8px;
   }
 
   .footer-bottom {
@@ -1182,8 +1202,29 @@
     text-align: center;
   }
 
+  /* Newsletter: stack input above a full-width button so "Subscribe" fits. */
+  .newsletter-form {
+    flex-direction: column;
+    gap: 10px;
+    overflow: visible;
+    box-shadow: none;
+    max-width: 380px;
+  }
+
+  .newsletter-form input {
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    text-align: center;
+  }
+
+  .newsletter-form button {
+    border-radius: var(--radius-lg);
+    padding: 15px 24px;
+    width: 100%;
+  }
+
+  /* Full-width cart drawer on phones (transform handles open/close). */
   .cart-panel {
     width: 100%;
-    right: -100%;
   }
 }

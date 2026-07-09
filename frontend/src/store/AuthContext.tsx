@@ -16,6 +16,7 @@ type AuthValue = {
   loading: boolean
   register: (input: { name: string; email: string; password: string }) => Promise<void>
   login: (email: string, password: string) => Promise<void>
+  oauth: (provider: 'google' | 'facebook', token: string) => Promise<void>
   logout: () => void
   updateProfile: (patch: { name?: string; phone?: string }) => Promise<void>
   saveAddress: (address: Address) => Promise<void>
@@ -48,6 +49,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(await auth.login(email, password))
   }, [])
 
+  const oauth = useCallback(async (provider: 'google' | 'facebook', token: string) => {
+    setUser(await auth.oauth(provider, token))
+  }, [])
+
   const logout = useCallback(() => {
     auth.logout()
     setUser(null)
@@ -72,12 +77,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       register,
       login,
+      oauth,
       logout,
       updateProfile,
       saveAddress,
       removeAddress,
     }),
-    [user, loading, register, login, logout, updateProfile, saveAddress, removeAddress],
+    [user, loading, register, login, oauth, logout, updateProfile, saveAddress, removeAddress],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

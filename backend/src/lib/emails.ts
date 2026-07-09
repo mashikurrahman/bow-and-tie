@@ -1,0 +1,152 @@
+import { config } from '../config'
+import type { MailInput } from './mailer'
+
+// Branded HTML email templates (rose theme to match the storefront).
+
+const ROSE = '#c9527a'
+const money = (n: number) => `৳${n.toLocaleString('en-US')}`
+const store = config.storeName
+const app = config.appUrl.replace(/\/$/, '')
+
+function layout(heading: string, body: string, preheader = ''): string {
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;background:#faf7f8;font-family:'Segoe UI',Arial,sans-serif;color:#2b2530;">
+  <span style="display:none;max-height:0;overflow:hidden;opacity:0;">${preheader}</span>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#faf7f8;padding:24px 12px;">
+    <tr><td align="center">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(40,20,30,.06);">
+        <tr><td style="background:linear-gradient(135deg,${ROSE},#a63c60);padding:26px 30px;">
+          <div style="color:#fff;font-size:22px;font-weight:800;letter-spacing:.02em;">${store}</div>
+          <div style="color:rgba(255,255,255,.85);font-size:12px;letter-spacing:.14em;text-transform:uppercase;">Handcrafted Bows &amp; Accessories</div>
+        </td></tr>
+        <tr><td style="padding:30px;">
+          <h1 style="margin:0 0 14px;font-size:20px;color:#2b2530;">${heading}</h1>
+          ${body}
+        </td></tr>
+        <tr><td style="padding:20px 30px;background:#fbeef2;color:#7a7080;font-size:12px;text-align:center;">
+          You’re receiving this because you shopped with ${store}.<br>
+          <a href="${app}" style="color:${ROSE};text-decoration:none;">${app.replace(/^https?:\/\//, '')}</a> · Dhaka, Bangladesh
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`
+}
+
+const button = (href: string, label: string) =>
+  `<a href="${href}" style="display:inline-block;background:${ROSE};color:#fff;text-decoration:none;font-weight:600;padding:12px 22px;border-radius:10px;font-size:14px;">${label}</a>`
+
+export interface OrderEmailData {
+  id: string
+  items: { name: string; quantity: number; price: number }[]
+  subtotal: number
+  discount: number
+  shipping: number
+  total: number
+  customerName: string
+  customerAddress: string
+  customerCity: string
+  payment: string
+}
+
+function orderTable(o: OrderEmailData): string {
+  const rows = o.items
+    .map(
+      (it) => `<tr>
+        <td style="padding:8px 0;border-bottom:1px solid #f0e7eb;">${it.name} <span style="color:#9a929c;">× ${it.quantity}</span></td>
+        <td style="padding:8px 0;border-bottom:1px solid #f0e7eb;text-align:right;white-space:nowrap;">${money(it.price * it.quantity)}</td>
+      </tr>`,
+    )
+    .join('')
+  const line = (label: string, val: string, bold = false) =>
+    `<tr><td style="padding:4px 0;${bold ? 'font-weight:700;font-size:16px;' : 'color:#7a7080;'}">${label}</td>
+     <td style="padding:4px 0;text-align:right;${bold ? 'font-weight:700;font-size:16px;color:' + ROSE : 'color:#7a7080;'}">${val}</td></tr>`
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;margin:8px 0 4px;">
+    ${rows}
+    <tr><td colspan="2" style="height:8px;"></td></tr>
+    ${line('Subtotal', money(o.subtotal))}
+    ${o.discount ? line('Discount', '−' + money(o.discount)) : ''}
+    ${line('Shipping', o.shipping === 0 ? 'Free' : money(o.shipping))}
+    ${line('Total', money(o.total), true)}
+  </table>`
+}
+
+export function orderConfirmationEmail(to: string, o: OrderEmailData): MailInput {
+  const body = `
+    <p style="font-size:14px;line-height:1.6;">Hi ${o.customerName}, thank you for your order! 🎀 We’ve received it and will start preparing it right away.</p>
+    <p style="font-size:14px;margin:6px 0 2px;"><b>Order number:</b> <span style="color:${ROSE};font-weight:700;">${o.id}</span></p>
+    <p style="font-size:13px;color:#7a7080;margin:0 0 14px;">Payment: ${o.payment.toUpperCase()} · Shipping to: ${o.customerAddress}, ${o.customerCity}</p>
+    ${orderTable(o)}
+    <div style="margin:22px 0 6px;">${button(`${app}/track`, 'Track your order')}</div>`
+  return { to, subject: `Order confirmed — ${o.id} · ${store}`, html: layout('Your order is confirmed! 🎀', body, `Order ${o.id} confirmed`) }
+}
+
+export function orderStatusEmail(to: string, o: OrderEmailData, status: string): MailInput {
+  const messages: Record<string, string> = {
+    Confirmed: 'Good news — your order has been confirmed and is being prepared. ✅',
+    Shipped: 'Your order is on its way! 🚚 It has been handed over for delivery.',
+    Delivered: 'Your order has been delivered. We hope you love it! 💝 Consider leaving a review.',
+    Cancelled: 'Your order has been cancelled. If this is a mistake, please contact us.',
+  }
+  const msg = messages[status] ?? `Your order status has been updated to “${status}”.`
+  const body = `
+    <p style="font-size:14px;line-height:1.6;">Hi ${o.customerName}, ${msg}</p>
+    <p style="font-size:14px;margin:6px 0 14px;"><b>Order number:</b> <span style="color:${ROSE};font-weight:700;">${o.id}</span> · Status: <b>${status}</b></p>
+    ${orderTable(o)}
+    <div style="margin:22px 0 6px;">${button(`${app}/track`, 'View order')}</div>`
+  return { to, subject: `Order ${o.id} — ${status} · ${store}`, html: layout(`Order update: ${status}`, body, `Your order is now ${status}`) }
+}
+
+export function welcomeEmail(to: string, name: string): MailInput {
+  const body = `
+    <p style="font-size:14px;line-height:1.6;">Hi ${name}, welcome to ${store}! 🎀 We’re so glad you’re here.</p>
+    <p style="font-size:14px;line-height:1.6;">Explore our handcrafted bows, clips and accessories — new pieces drop regularly, and members are first to know about seasonal sales.</p>
+    <div style="margin:20px 0 6px;">${button(`${app}/shop`, 'Start shopping')}</div>`
+  return { to, subject: `Welcome to ${store}! 🎀`, html: layout(`Welcome, ${name}!`, body, 'Welcome to the family') }
+}
+
+export function passwordResetEmail(to: string, name: string, resetUrl: string): MailInput {
+  const body = `
+    <p style="font-size:14px;line-height:1.6;">Hi ${name}, we received a request to reset your ${store} password.</p>
+    <p style="font-size:14px;line-height:1.6;">Click below to choose a new password. This link expires in 1 hour. If you didn’t request this, you can safely ignore this email.</p>
+    <div style="margin:20px 0 10px;">${button(resetUrl, 'Reset my password')}</div>
+    <p style="font-size:12px;color:#9a929c;word-break:break-all;">Or paste this link: ${resetUrl}</p>`
+  return { to, subject: `Reset your ${store} password`, html: layout('Reset your password', body, 'Password reset link') }
+}
+
+export function abandonedCartEmail(
+  to: string,
+  items: { name: string; quantity: number; price: number }[],
+): MailInput {
+  const rows = items
+    .map(
+      (it) =>
+        `<tr><td style="padding:8px 0;border-bottom:1px solid #f0e7eb;">${it.name} <span style="color:#9a929c;">× ${it.quantity}</span></td>
+         <td style="padding:8px 0;border-bottom:1px solid #f0e7eb;text-align:right;">${money(it.price * it.quantity)}</td></tr>`,
+    )
+    .join('')
+  const body = `
+    <p style="font-size:14px;line-height:1.6;">You left something lovely behind! 🎀 Your cart is saved and ready whenever you are.</p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;margin:8px 0 4px;">${rows}</table>
+    <div style="margin:22px 0 6px;">${button(`${app}/cart`, 'Complete your order')}</div>`
+  return { to, subject: `You left something in your cart 🎀 · ${store}`, html: layout('Still thinking it over?', body, 'Your cart is waiting') }
+}
+
+export function newsletterWelcomeEmail(to: string, couponCode: string, percent: number): MailInput {
+  const body = `
+    <p style="font-size:14px;line-height:1.6;">Thanks for subscribing to ${store}! 🎀 You’ll be first to hear about new collections and seasonal sales.</p>
+    <p style="font-size:14px;line-height:1.6;">As a welcome gift, here’s <b>${percent}% off</b> your first order:</p>
+    <div style="text-align:center;margin:16px 0;">
+      <span style="display:inline-block;border:2px dashed ${ROSE};color:${ROSE};font-weight:800;font-size:20px;letter-spacing:2px;padding:12px 26px;border-radius:10px;">${couponCode}</span>
+    </div>
+    <div style="margin:16px 0 6px;text-align:center;">${button(`${app}/shop`, 'Shop now')}</div>`
+  return { to, subject: `Welcome — here’s ${percent}% off 🎀`, html: layout('Welcome to the list!', body, `${percent}% off inside`) }
+}
+
+export function backInStockEmail(to: string, productName: string, productUrl: string): MailInput {
+  const body = `
+    <p style="font-size:14px;line-height:1.6;">Good news! <b>${productName}</b> is back in stock at ${store}. 🎉</p>
+    <p style="font-size:14px;line-height:1.6;">Popular pieces sell out fast, so grab yours before it’s gone again.</p>
+    <div style="margin:20px 0 6px;">${button(productUrl, 'Shop it now')}</div>`
+  return { to, subject: `Back in stock: ${productName} · ${store}`, html: layout('It’s back! 🎉', body, `${productName} is available again`) }
+}

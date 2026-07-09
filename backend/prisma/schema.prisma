@@ -27,15 +27,16 @@ generator client {
 }
 
 model User {
-  id        String    @id @default(cuid())
-  name      String
-  email     String    @unique
-  password  String
-  phone     String?
-  role      String    @default("customer") // "customer" | "admin"
-  addresses Address[]
-  orders    Order[]
-  createdAt DateTime  @default(now())
+  id          String    @id @default(cuid())
+  name        String
+  email       String    @unique
+  password    String
+  phone       String?
+  role        String    @default("customer") // "customer" | "admin" | "staff"
+  permissions String    @default("[]") // JSON array of section keys a staff user may access
+  addresses   Address[]
+  orders      Order[]
+  createdAt   DateTime  @default(now())
 }
 
 model Address {
@@ -74,13 +75,60 @@ model Product {
 }
 
 model Review {
-  id        String  @id @default(cuid())
-  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  id        String   @id @default(cuid())
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   productId String
+  userId    String? // links the review to the account that wrote it
   name      String
   rating    Int
+  title     String   @default("")
   date      String
   text      String
+  images    String   @default("[]") // JSON array of photo URLs
+  verified  Boolean  @default(false) // true when the reviewer bought the product
+  createdAt DateTime @default(now())
+}
+
+// A customer question on a product, optionally answered by the shop.
+model Question {
+  id         String    @id @default(cuid())
+  productId  String
+  userId     String?
+  name       String
+  question   String
+  answer     String?
+  answeredAt DateTime?
+  createdAt  DateTime  @default(now())
+}
+
+// Newsletter signups from the storefront footer.
+model NewsletterSubscriber {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+}
+
+// A cart a shopper left without checking out — used to send a gentle reminder.
+model AbandonedCart {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  items     String   @default("[]") // JSON snapshot [{ name, quantity, price, image }]
+  total     Int      @default(0)
+  reminded  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Someone who wants to be told when a sold-out product is restocked.
+model StockAlert {
+  id        String   @id @default(cuid())
+  productId String
+  email     String
+  userId    String?
+  notified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@unique([productId, email])
 }
 
 model Order {
@@ -93,13 +141,17 @@ model Order {
   shipping        Int         @default(0)
   total           Int
   customerName    String
+  customerEmail   String? // used to send order confirmation / status emails
   customerPhone   String
   customerAddress String
   customerCity    String
+  deliveryZone    String   @default("outside") // "inside" | "outside" (Dhaka)
   payment         String // "cod" | "bkash" | "nagad"
   txnId           String?
   notes           String?
   promoCode       String?
+  courier         String? // "pathao" | "steadfast" | "redx"
+  trackingCode    String?
   status          String      @default("Processing")
   timeline        String      @default("[]") // JSON array of { status, at }
   createdAt       DateTime    @default(now())

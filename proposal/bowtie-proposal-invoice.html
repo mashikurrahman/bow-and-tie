@@ -12,6 +12,10 @@
     --muted:#7a7080;
     --line:#ece2e7;
     --paper:#ffffff;
+    --green:#1a7f4b;
+    --green-bg:#e7f6ee;
+    --amber:#b4632a;
+    --amber-bg:#fbefe3;
   }
   *{box-sizing:border-box;margin:0;padding:0;}
   html{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
@@ -38,7 +42,7 @@
   h2.section{
     font-size:16px;color:var(--rose-dark);
     border-bottom:2px solid var(--blush);
-    padding-bottom:6px;margin:26px 0 14px;
+    padding-bottom:6px;margin:18px 0 10px;
   }
   h2.section:first-of-type{margin-top:0;}
   p{margin:0 0 8px;}
@@ -52,6 +56,13 @@
     font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;
     letter-spacing:.03em;text-transform:uppercase;
   }
+
+  /* status pills */
+  .st{display:inline-block;font-size:9.5px;font-weight:700;padding:2px 9px;border-radius:20px;
+      letter-spacing:.03em;text-transform:uppercase;white-space:nowrap;}
+  .st-done{background:var(--green-bg);color:var(--green);}
+  .st-prog{background:var(--amber-bg);color:var(--amber);}
+  .st-soon{background:#eef0f4;color:#5a6472;}
 
   /* ---------- cover ---------- */
   .cover-top{display:flex;justify-content:space-between;align-items:flex-start;}
@@ -69,7 +80,7 @@
   }
   .hero .tag{background:rgba(255,255,255,.2);color:#fff;}
   .hero h1{color:#fff;font-size:30px;line-height:1.15;margin:12px 0 8px;}
-  .hero p{color:rgba(255,255,255,.9);font-size:12.5px;max-width:78%;margin:0;}
+  .hero p{color:rgba(255,255,255,.9);font-size:12.5px;max-width:82%;margin:0;}
 
   .parties{display:flex;gap:16px;margin-top:26px;}
   .party{
@@ -93,8 +104,10 @@
     padding:9px 11px;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;font-weight:700;
   }
   thead th.num{text-align:right;}
-  tbody td{padding:9px 11px;border-bottom:1px solid var(--line);vertical-align:top;}
+  thead th.ctr{text-align:center;}
+  tbody td{padding:6.5px 11px;border-bottom:1px solid var(--line);vertical-align:top;}
   tbody td.num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;}
+  tbody td.ctr{text-align:center;}
   tbody tr:nth-child(even){background:#fcf7f9;}
   .titem{font-weight:600;}
   .titem small{display:block;color:var(--muted);font-weight:400;font-size:10.3px;margin-top:2px;}
@@ -111,19 +124,16 @@
   .two{display:flex;gap:16px;}
   .two > div{flex:1;}
   .box{border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:10px 0;}
-  .box h3{font-size:12.5px;margin-bottom:6px;}
-  .pill-ok{color:#1a7f4b;font-weight:700;}
-  .pill-warn{color:#b4632a;font-weight:700;}
+  .box h3{font-size:12.5px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;gap:8px;}
 
   .footer{
     position:absolute;bottom:10mm;left:16mm;right:16mm;
     display:flex;justify-content:space-between;
     font-size:9.5px;color:var(--muted);border-top:1px solid var(--line);padding-top:6px;
   }
-  .sign{display:flex;gap:40px;margin-top:34px;}
+  .sign{display:flex;gap:40px;margin-top:22px;}
   .sign > div{flex:1;}
   .sign .line{border-top:1px solid var(--ink);margin-top:34px;padding-top:5px;font-size:10.5px;color:var(--muted);}
-  .check{color:var(--rose);font-weight:800;}
 </style>
 </head>
 <body>
@@ -141,16 +151,17 @@
     <div class="doc-meta">
       <div><b>Proposal &amp; Invoice</b></div>
       <div>No. <b>BT-2026-001</b></div>
-      <div>Date: <b>08 July 2026</b></div>
-      <div>Valid until: <b>07 Aug 2026</b></div>
+      <div>Date: <b>09 July 2026</b></div>
+      <div>Valid until: <b>08 Aug 2026</b></div>
     </div>
   </div>
 
   <div class="hero">
     <span class="tag">Project Proposal &amp; Cost Estimate</span>
     <h1>Custom E-Commerce Website<br/>with Admin Panel &amp; Automation</h1>
-    <p>A complete online store for Bow &amp; Tie — customer website, powerful admin dashboard,
-       online payments, and automatic WhatsApp business alerts.</p>
+    <p>A complete online store for Bow &amp; Tie — a modern customer website, a powerful admin
+       dashboard, online payments, and automatic WhatsApp business alerts, built as one integrated
+       solution.</p>
   </div>
 
   <div class="parties">
@@ -171,24 +182,23 @@
   </div>
 
   <div class="summary-cards">
-    <div class="scard"><div class="n">৳1,30,000</div><div class="l">Development (one-time)</div></div>
-    <div class="scard"><div class="n">৳5,000</div><div class="l">Optional setup</div></div>
-    <div class="scard"><div class="n">~৳10,300</div><div class="l">Tools / year</div></div>
+    <div class="scard"><div class="n">৳40,000</div><div class="l">Total Development</div></div>
+    <div class="scard"><div class="n">Design ✓</div><div class="l">UI/UX Complete</div></div>
+    <div class="scard"><div class="n">~৳10,300</div><div class="l">Tools / year*</div></div>
   </div>
 
   <div class="intro">
     <h2 class="section">About This Document</h2>
-    <p>This document works as both a <b>proposal</b> and an <b>invoice</b>. It explains what will be
-       built, what each part costs, and which costs are for development work versus tools and services
-       purchased from outside providers (like the domain, hosting, payment gateway, and WhatsApp).</p>
-    <p>All prices are in <b>Bangladeshi Taka (৳)</b> and reflect average market rates for a custom-built
-       e-commerce solution of this size. Charges are kept transparent so you always know what you are
-       paying for and to whom.</p>
+    <p>This document works as both a <b>proposal</b> and an <b>invoice</b> for your custom e-commerce
+       website. It explains what is being built, the current progress, and a clear, item-by-item cost —
+       kept simple so you always know exactly what you are paying for.</p>
+    <p>All prices are in <b>Bangladeshi Taka (৳)</b>. The one-time development cost is
+       <b>৳40,000</b>. A small set of yearly third-party costs (domain and hosting) are paid directly
+       to their providers and are listed separately on the last page.</p>
     <div class="note">
-      <b>Two kinds of charges are kept separate throughout:</b><br/>
-      <b>1) Developer charges</b> — one-time payments for building and setting up the website.<br/>
-      <b>2) Tools &amp; services</b> — recurring or third-party costs paid to outside providers
-      (domain, hosting, payment gateway, WhatsApp). These are <b>not</b> developer income.
+      <b>Project status:</b> The <b>design (UI/UX) and the customer website are complete</b>.
+      The remaining work — backend, online payments and WhatsApp automation — is
+      <b>currently in development</b> and on track for delivery within the timeline on the final page.
     </div>
   </div>
 
@@ -201,67 +211,63 @@
 <!-- ============ PAGE 2 — SCOPE ============ -->
 <section class="page">
   <h2 class="section">What You Get — Scope of Work</h2>
-  <p>The project is a fully custom online store — not a template. It has two sides: the
-     <b>customer website</b> and a private <b>admin panel</b> to run the whole business.</p>
+  <p>This is a fully custom online store — not a template. It has two sides: the
+     <b>customer website</b> and a private <b>admin panel</b> to run the whole business, plus
+     <b>online payments</b> and <b>WhatsApp alerts</b> built in.</p>
 
   <div class="two">
     <div>
       <div class="box">
-        <h3>🛍️ Customer Website</h3>
+        <h3>🛍️ Customer Website <span class="st st-done">✓ Complete</span></h3>
         <ul>
           <li>Modern, mobile-friendly storefront</li>
           <li>Product browsing, search &amp; categories</li>
-          <li>Product detail pages with photos</li>
+          <li>Product detail pages with photo galleries</li>
           <li>Shopping cart &amp; slide-out cart drawer</li>
-          <li>Wishlist / favourites (per customer account)</li>
+          <li>Wishlist / favourites per customer account</li>
           <li>Customer accounts, login &amp; order history</li>
-          <li>Secure checkout &amp; order tracking</li>
-          <li>Discount pop-ups, hero sliders &amp; sale pages</li>
+          <li>Checkout &amp; order tracking</li>
+          <li>Reviews, product Q&amp;A &amp; sale pages</li>
         </ul>
       </div>
     </div>
     <div>
       <div class="box">
-        <h3>📊 Admin Panel</h3>
+        <h3>📊 Admin Panel <span class="st st-done">✓ Complete</span></h3>
         <ul>
           <li>Dashboard with sales charts &amp; insights</li>
           <li>Product management with real photo uploads</li>
+          <li>Bulk product import (file upload)</li>
           <li>Order management &amp; status updates</li>
           <li>Customer list &amp; details</li>
-          <li>Promotions &amp; discount campaigns</li>
-          <li>Coupon code generator</li>
+          <li>Promotions, discounts &amp; coupon codes</li>
+          <li>Sales reports &amp; staff accounts</li>
           <li>Store settings &amp; secure admin login</li>
         </ul>
       </div>
     </div>
   </div>
 
-  <h2 class="section">New Features Being Added</h2>
+  <h2 class="section">Included Integrations</h2>
   <div class="box">
-    <h3>💳 Online Payment Gateway — SSLCommerz</h3>
+    <h3>💳 Online Payment Gateway — SSLCommerz <span class="st st-prog">In Development</span></h3>
     <p class="small">Customers pay online using <b>cards, bKash, Nagad, Rocket and internet banking</b>
-       — all through a single, trusted Bangladeshi gateway. Money settles directly to the business
-       bank account. No monthly fee; the gateway charges a small percentage per successful sale only.</p>
+       — all through a single, trusted Bangladeshi gateway. Money settles directly to the business bank
+       account. There is no monthly fee; the gateway charges a small percentage per successful sale only.</p>
   </div>
   <div class="box">
-    <h3>📱 WhatsApp Business Automation (Admin Alerts)</h3>
-    <p class="small">The website automatically sends the admin WhatsApp messages so the shop can be
-       managed from the phone, without logging in. Alerts included:</p>
+    <h3>📱 WhatsApp Business Automation <span class="st st-prog">In Development</span></h3>
+    <p class="small">The website automatically sends the admin WhatsApp messages, so the shop can be
+       managed from the phone without logging in. Included alerts:</p>
     <ul class="small">
+      <li><b>New order alert</b> — instantly when a customer places an order</li>
       <li><b>Low-stock alert</b> — when a product is about to run out</li>
       <li><b>Back-in-stock update</b> — when a product is restocked</li>
-      <li><b>New order alert</b> — instantly when a customer places an order</li>
       <li><b>Weekly sales summary</b> — total orders &amp; revenue every week</li>
-      <li><b>Monthly sales report</b> — a bigger picture each month</li>
-      <li><b>Suggested extras</b> — payment received alert, order cancelled alert,
-          daily "good morning" sales snapshot, and best-selling product of the week</li>
+      <li><b>Monthly sales report</b> — a bigger-picture view each month</li>
     </ul>
-  </div>
-
-  <div class="note small">
-    <b>Note:</b> The website is already built and working (storefront + admin panel + promotions +
-    coupons). This proposal covers the full build plus the two new features above, priced item by item
-    so you can see the value of each part.
+    <p class="small muted">Set up on the official WhatsApp Business platform. For admin-only alerts the
+       running cost stays within the free monthly allowance in normal use.</p>
   </div>
 
   <div class="footer">
@@ -270,7 +276,7 @@
   </div>
 </section>
 
-<!-- ============ PAGE 3 — INVOICE ============ -->
+<!-- ============ PAGE 3 — INVOICE + TERMS ============ -->
 <section class="page">
   <h2 class="section">A. Developer Charges — One-Time Development</h2>
   <p class="small muted">Paid to the developer for designing, building, testing and delivering the website.</p>
@@ -282,41 +288,41 @@
       <tr>
         <td class="titem">Customer Website (Storefront)
           <small>Multi-page responsive store, cart, wishlist, checkout, accounts, order tracking</small></td>
-        <td class="num">1</td><td class="num">30,000</td><td class="num">30,000</td>
+        <td class="num">1</td><td class="num">9,000</td><td class="num">9,000</td>
       </tr>
       <tr>
         <td class="titem">Backend, Database &amp; Secure Login
           <small>Server API, product/order/customer database, encrypted authentication</small></td>
-        <td class="num">1</td><td class="num">25,000</td><td class="num">25,000</td>
+        <td class="num">1</td><td class="num">8,000</td><td class="num">8,000</td>
       </tr>
       <tr>
         <td class="titem">Admin Management Panel
           <small>Dashboard &amp; charts, products with image upload, orders, customers, settings</small></td>
-        <td class="num">1</td><td class="num">28,000</td><td class="num">28,000</td>
+        <td class="num">1</td><td class="num">8,000</td><td class="num">8,000</td>
       </tr>
       <tr>
         <td class="titem">Promotions, Discounts &amp; Coupon System
           <small>Auto-apply discounts, home pop-up, hero slider, sale pages, coupon generator</small></td>
-        <td class="num">1</td><td class="num">12,000</td><td class="num">12,000</td>
+        <td class="num">1</td><td class="num">4,000</td><td class="num">4,000</td>
       </tr>
       <tr>
         <td class="titem">Payment Gateway Integration (SSLCommerz)
           <small>Secure online payments — cards, bKash, Nagad, Rocket, net banking</small></td>
-        <td class="num">1</td><td class="num">12,000</td><td class="num">12,000</td>
+        <td class="num">1</td><td class="num">4,000</td><td class="num">4,000</td>
       </tr>
       <tr>
         <td class="titem">WhatsApp Business Automation
           <small>Low-stock, restock, new-order, weekly &amp; monthly report alerts to admin</small></td>
-        <td class="num">1</td><td class="num">15,000</td><td class="num">15,000</td>
+        <td class="num">1</td><td class="num">4,000</td><td class="num">4,000</td>
       </tr>
       <tr>
         <td class="titem">Testing, Deployment &amp; Handover
           <small>Final testing, going live, and a walkthrough/training session</small></td>
-        <td class="num">1</td><td class="num">8,000</td><td class="num">8,000</td>
+        <td class="num">1</td><td class="num">3,000</td><td class="num">3,000</td>
       </tr>
     </tbody>
     <tfoot>
-      <tr class="subrow"><td colspan="3">Developer Subtotal (A)</td><td class="num">1,30,000</td></tr>
+      <tr class="subrow"><td colspan="3">Developer Subtotal (A)</td><td class="num">40,000</td></tr>
     </tfoot>
   </table>
 
@@ -329,7 +335,7 @@
       <tr>
         <td class="titem">Hosting &amp; Domain Setup (if handled by developer)
           <small>Server setup, domain connection, SSL, and going live — one-time minimum charge.
-          If you prefer to set these up yourself, see recommendations on the next page (this charge is removed).</small></td>
+          Removed if you arrange the domain &amp; hosting yourself (see Section C for the provider costs).</small></td>
         <td class="num">5,000</td>
       </tr>
       <tr>
@@ -340,6 +346,14 @@
     </tbody>
   </table>
 
+  <div class="footer">
+    <span>Bow &amp; Tie — Proposal &amp; Invoice · BT-2026-001</span>
+    <span>Page 3 of 4</span>
+  </div>
+</section>
+
+<!-- ============ PAGE 4 — TOOLS, TOTALS & TERMS ============ -->
+<section class="page">
   <h2 class="section">C. Tools &amp; Services — Paid to Outside Providers</h2>
   <p class="small muted">These are <b>not</b> developer charges. They are yearly/usage costs paid to
      third-party providers to keep the site online and processing payments.</p>
@@ -358,92 +372,32 @@
       <tr class="subrow"><td colspan="2">Estimated Tools Subtotal (C)</td><td class="num">~৳10,300 / yr</td></tr>
     </tfoot>
   </table>
-  <p class="small muted">*WhatsApp: admin alerts fit inside the free monthly allowance in most cases — details on the next page.</p>
+  <p class="small muted">*WhatsApp: admin alerts fit inside the free monthly allowance in most cases.</p>
 
-  <table style="margin-top:14px;">
+  <table style="margin-top:12px;">
     <tfoot>
-      <tr class="subrow"><td style="width:70%">Developer Total (A) — payable to developer</td><td class="num">৳1,30,000</td></tr>
+      <tr class="subrow"><td style="width:70%">Developer Total (A) — payable to developer</td><td class="num">৳40,000</td></tr>
       <tr class="subrow"><td>Optional hosting setup (B) — if developer handles it</td><td class="num">৳5,000</td></tr>
-      <tr class="totrow"><td>TOTAL DUE TO DEVELOPER (one-time)</td><td class="num">৳1,35,000</td></tr>
+      <tr class="totrow"><td>TOTAL DUE TO DEVELOPER (one-time)</td><td class="num">৳45,000</td></tr>
     </tfoot>
   </table>
   <p class="small muted">Tools &amp; services (Section C) are paid directly to the providers and are billed separately from developer charges.</p>
-
-  <div class="footer">
-    <span>Bow &amp; Tie — Proposal &amp; Invoice · BT-2026-001</span>
-    <span>Page 3 of 4</span>
-  </div>
-</section>
-
-<!-- ============ PAGE 4 — WHATSAPP + HOSTING + TERMS ============ -->
-<section class="page">
-  <h2 class="section">WhatsApp Automation — Is It Free?</h2>
-  <p class="small">Short answer: <b>the admin alerts are effectively free to run</b>, but the right setup
-     matters. There are two ways to do it — both are explained honestly below.</p>
-
-  <div class="box">
-    <h3>Option 1 — Official WhatsApp Cloud API <span class="pill-ok">✔ Recommended</span></h3>
-    <ul class="small">
-      <li><b>Cost:</b> Meta gives a <b>free monthly allowance</b> (around 1,000 conversations/month).
-          Since alerts only go to <b>you</b> (the admin), you almost always stay within the free tier.
-          Beyond that, "utility" messages cost roughly <b>৳0.40–0.60 each</b> — a few taka a month at most.</li>
-      <li><b>Reliability:</b> Official and stable. Your number will <b>not</b> get banned.</li>
-      <li><b>What's needed:</b> A free Meta Business account, a phone number for WhatsApp Business,
-          and a one-time verification. The developer sets this all up.</li>
-      <li><b>Best for:</b> A real business that wants alerts to always arrive. This is what the price includes.</li>
-    </ul>
-  </div>
-
-  <div class="box">
-    <h3>Option 2 — Free Unofficial Method <span class="pill-warn">⚠ Cheaper but risky</span></h3>
-    <ul class="small">
-      <li><b>Cost:</b> ৳0 — uses a free open-source tool that logs in like WhatsApp Web.</li>
-      <li><b>Risk:</b> It is <b>against WhatsApp's rules</b>. The number can be <b>blocked or banned</b>
-          without warning, and it can stop working after WhatsApp updates.</li>
-      <li><b>Upkeep:</b> Needs the phone/session to stay connected; less stable.</li>
-      <li><b>Best for:</b> Testing or a very tight budget where an occasional outage is acceptable.</li>
-    </ul>
-  </div>
-
-  <div class="note small">
-    <b>Recommendation:</b> Go with the <b>Official Cloud API</b>. For admin-only alerts the running cost
-    is essentially free, and it protects your business number. The unofficial option is available on
-    request if you prefer zero third-party setup.
-  </div>
-
-  <h2 class="section">Hosting &amp; Domain — Two Ways to Handle It</h2>
-  <div class="two">
-    <div class="box">
-      <h3>Developer sets it up</h3>
-      <p class="small">A one-time <b>৳5,000</b> setup charge (Section B). Includes buying/connecting the
-         domain, configuring the server, SSL, and launching the site. You still pay the yearly
-         provider costs in Section C.</p>
-    </div>
-    <div class="box">
-      <h3>You set it up yourself</h3>
-      <p class="small">The ৳5,000 setup charge is removed. Recommended, reliable options:</p>
-      <ul class="small">
-        <li><b>Domain:</b> Namecheap or Exonhost (~৳1,300/yr)</li>
-        <li><b>Hosting:</b> Contabo or DigitalOcean VPS, or local <b>Exonhost / HostMight</b> (~৳9,000/yr)</li>
-        <li><b>SSL:</b> Free (Let's Encrypt)</li>
-      </ul>
-    </div>
-  </div>
 
   <h2 class="section">Payment Schedule &amp; Terms</h2>
   <table>
     <thead><tr><th style="width:24%">Milestone</th><th style="width:52%">Stage</th><th class="num">Amount (৳)</th></tr></thead>
     <tbody>
-      <tr><td class="titem">40% Advance</td><td class="small">To begin work</td><td class="num">54,000</td></tr>
-      <tr><td class="titem">40% Midway</td><td class="small">On beta/demo approval</td><td class="num">54,000</td></tr>
-      <tr><td class="titem">20% Final</td><td class="small">On delivery &amp; go-live</td><td class="num">27,000</td></tr>
+      <tr><td class="titem">40% Advance</td><td class="small">To continue development (design &amp; storefront already delivered)</td><td class="num">18,000</td></tr>
+      <tr><td class="titem">40% Midway</td><td class="small">On payment gateway &amp; automation demo approval</td><td class="num">18,000</td></tr>
+      <tr><td class="titem">20% Final</td><td class="small">On final delivery &amp; go-live</td><td class="num">9,000</td></tr>
     </tbody>
-    <tfoot><tr class="totrow"><td colspan="2">Total (incl. hosting setup)</td><td class="num">1,35,000</td></tr></tfoot>
+    <tfoot><tr class="totrow"><td colspan="2">Total (incl. optional hosting setup)</td><td class="num">৳45,000</td></tr></tfoot>
   </table>
   <ul class="small">
     <li>Prices are in BDT and valid for 30 days from the date on this document.</li>
+    <li>Development charge is <b>৳40,000</b>. The optional hosting setup (৳5,000) is included above only if the developer handles hosting — if you set it up yourself the total is <b>৳40,000</b>.</li>
     <li>Tools &amp; services (Section C) are paid to their providers and billed separately.</li>
-    <li>Estimated timeline for the two new features (payments + WhatsApp): <b>2–3 weeks</b> after advance.</li>
+    <li>Estimated timeline for the remaining development (backend, payments &amp; WhatsApp): <b>2–3 weeks</b> after the advance.</li>
     <li>One round of minor revisions is included with each milestone.</li>
   </ul>
 

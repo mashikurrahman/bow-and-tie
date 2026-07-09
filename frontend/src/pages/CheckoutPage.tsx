@@ -2,10 +2,11 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { whatsappNumber } from '../data'
 import {
-  FREE_SHIPPING_THRESHOLD,
-  SHIPPING_FLAT,
+  SHIPPING_ZONES,
+  type ShippingZone,
   effectivePrice,
   formatPrice,
+  shippingFor,
   useStore,
 } from '../store/StoreContext'
 import { useProducts } from '../store/ProductsContext'
@@ -23,19 +24,23 @@ export default function CheckoutPage() {
   const firstAddr = user?.addresses[0]
   const [form, setForm] = useState({
     name: firstAddr?.name ?? user?.name ?? '',
+    email: user?.email ?? '',
     phone: firstAddr?.phone ?? user?.phone ?? '',
     address: firstAddr?.address ?? '',
     city: firstAddr?.city ?? 'Dhaka',
     notes: '',
   })
   const [payment, setPayment] = useState<Payment>('cod')
+  const [zone, setZone] = useState<ShippingZone>(
+    (firstAddr?.city ?? 'Dhaka').trim().toLowerCase() === 'dhaka' ? 'inside' : 'outside',
+  )
   const [txnId, setTxnId] = useState('')
   const [promo, setPromo] = useState('')
   const [discountRate, setDiscountRate] = useState(0)
   const [appliedCode, setAppliedCode] = useState('')
   const [busy, setBusy] = useState(false)
 
-  const shipping = subtotal === 0 || subtotal > FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FLAT
+  const shipping = shippingFor(zone, subtotal)
   const discount = Math.round(subtotal * discountRate)
   const total = subtotal - discount + shipping
 
@@ -103,7 +108,14 @@ export default function CheckoutPage() {
           color: l.color,
           size: l.size,
         })),
-        customer: { name: form.name, phone: form.phone, address: form.address, city: form.city },
+        customer: {
+          name: form.name,
+          email: form.email || undefined,
+          phone: form.phone,
+          address: form.address,
+          city: form.city,
+        },
+        deliveryZone: zone,
         payment,
         txnId: txnId || undefined,
         notes: form.notes || undefined,
@@ -149,6 +161,10 @@ export default function CheckoutPage() {
             <label>Full Name *</label>
             <input required value={form.name} onChange={set('name')} placeholder="Your name" />
           </div>
+          <div className="field">
+            <label>Email {user ? '' : '(for order confirmation)'}</label>
+            <input type="email" value={form.email} onChange={set('email')} placeholder="you@email.com" />
+          </div>
           <div className="field-row">
             <div className="field">
               <label>Phone *</label>
@@ -166,6 +182,19 @@ export default function CheckoutPage() {
           <div className="field">
             <label>Order Notes (optional)</label>
             <textarea value={form.notes} onChange={set('notes')} rows={2} placeholder="Any special instructions" />
+          </div>
+
+          <h3>Delivery Area</h3>
+          <div className="pay-methods">
+            {(Object.keys(SHIPPING_ZONES) as ShippingZone[]).map((z) => (
+              <label key={z} className={`pay-option ${zone === z ? 'active' : ''}`}>
+                <input type="radio" name="zone" checked={zone === z} onChange={() => setZone(z)} />
+                <span className="zone-opt">
+                  <span>{SHIPPING_ZONES[z].label}</span>
+                  <small>{shippingFor(z, subtotal) === 0 ? 'Free delivery' : formatPrice(SHIPPING_ZONES[z].fee)} · {SHIPPING_ZONES[z].eta}</small>
+                </span>
+              </label>
+            ))}
           </div>
 
           <h3>Payment Method</h3>
@@ -214,7 +243,7 @@ export default function CheckoutPage() {
 
           <div className="cart-total-row"><span>Subtotal</span><span>{formatPrice(subtotal)}</span></div>
           {discount > 0 && <div className="cart-total-row discount"><span>Discount</span><span>-{formatPrice(discount)}</span></div>}
-          <div className="cart-total-row"><span>Shipping</span><span>{shipping === 0 ? 'Free' : formatPrice(shipping)}</span></div>
+          <div className="cart-total-row"><span>Shipping · {SHIPPING_ZONES[zone].eta}</span><span>{shipping === 0 ? 'Free' : formatPrice(shipping)}</span></div>
           <div className="cart-total-row grand"><span>Total</span><span>{formatPrice(total)}</span></div>
 
           <button type="submit" className="btn btn-full" disabled={busy}>{busy ? 'Placing order…' : 'Place Order'}</button>

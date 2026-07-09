@@ -27,12 +27,13 @@ export default function Layout() {
       <Toasts />
       <a
         className="whatsapp-fab"
-        href={`https://wa.me/${whatsappNumber}`}
+        href={`https://wa.me/${whatsappNumber}?text=${encodeURIComponent('Hi Bow & Tie! I have a question 🎀')}`}
         target="_blank"
         rel="noopener noreferrer"
-        aria-label="Order on WhatsApp"
+        aria-label="Chat with us on WhatsApp"
       >
-        💬
+        <span className="whatsapp-fab-icon">💬</span>
+        <span className="whatsapp-fab-label">Chat with us</span>
       </a>
     </>
   )

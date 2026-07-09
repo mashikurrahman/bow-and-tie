@@ -1,18 +1,41 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { formatPrice, useStore } from '../store/StoreContext'
 import { useProducts } from '../store/ProductsContext'
+import { useAuth } from '../store/AuthContext'
+import { stockAlerts } from '../services/db'
+import { recordView } from '../store/recentlyViewed'
+import { usePageMeta } from '../hooks/usePageMeta'
 import ProductCard from '../components/ProductCard'
+import ReviewsSection from '../components/ReviewsSection'
+import QASection from '../components/QASection'
+import ShareButtons from '../components/ShareButtons'
+import RecentlyViewed from '../components/RecentlyViewed'
 
 export default function ProductDetailPage() {
   const { id } = useParams()
   const { getProduct, getRelated } = useProducts()
   const product = id ? getProduct(id) : undefined
   const { addToCart, setCartOpen, toggleWishlist, isWished } = useStore()
+  const { user } = useAuth()
   const [color, setColor] = useState<string>()
   const [size, setSize] = useState<string>()
   const [qty, setQty] = useState(1)
   const [activeImg, setActiveImg] = useState(0)
+  const [zoom, setZoom] = useState(false)
+  const [sizeGuide, setSizeGuide] = useState(false)
+  const [notifyEmail, setNotifyEmail] = useState(user?.email ?? '')
+  const [notified, setNotified] = useState(false)
+  const [notifyBusy, setNotifyBusy] = useState(false)
+
+  usePageMeta(product?.name, product?.description)
+
+  // Record this view for the "Recently Viewed" row.
+  useEffect(() => {
+    if (product) recordView(product.id)
+    setActiveImg(0)
+    setZoom(false)
+  }, [product])
 
   if (!product) {
     return (
@@ -28,6 +51,7 @@ export default function ProductDetailPage() {
   const discount = wasPrice > shownPrice ? Math.round(((wasPrice - shownPrice) / wasPrice) * 100) : 0
   const related = getRelated(product)
   const wished = isWished(product.id)
+  const mainImg = product.gallery?.[activeImg] ?? product.image
 
   const handleAdd = (openCart: boolean) => {
     addToCart(product, {
@@ -36,6 +60,17 @@ export default function ProductDetailPage() {
       quantity: qty,
     })
     if (openCart) setCartOpen(true)
+  }
+
+  const submitNotify = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setNotifyBusy(true)
+    try {
+      await stockAlerts.notifyMe(product.id, notifyEmail)
+      setNotified(true)
+    } finally {
+      setNotifyBusy(false)
+    }
   }
 
   return (
@@ -48,9 +83,10 @@ export default function ProductDetailPage() {
 
       <div className="product-detail">
         <div className="product-gallery">
-          <div className="gallery-main">
-            <img src={product.gallery?.[activeImg] ?? product.image} alt={product.name} className="product-main-img" />
+          <div className="gallery-main zoomable" onClick={() => setZoom(true)} title="Click to zoom">
+            <img src={mainImg} alt={product.name} className="product-main-img" />
             {product.badge && <span className="arrival-badge detail-badge">{product.badge}</span>}
+            <span className="zoom-hint">🔍 Click to zoom</span>
           </div>
           {product.gallery && product.gallery.length > 1 && (
             <div className="gallery-thumbs">
@@ -106,7 +142,10 @@ export default function ProductDetailPage() {
           </div>
 
           <div className="product-option">
-            <label>Size</label>
+            <div className="option-label-row">
+              <label>Size</label>
+              <button type="button" className="size-guide-link" onClick={() => setSizeGuide(true)}>📏 Size &amp; wear guide</button>
+            </div>
             <div className="option-chips">
               {product.sizes.map((s) => (
                 <button
@@ -120,43 +159,57 @@ export default function ProductDetailPage() {
             </div>
           </div>
 
-          <div className="product-actions">
-            <div className="cart-qty qty-lg">
-              <button onClick={() => setQty((q) => Math.max(1, q - 1))} aria-label="Decrease">−</button>
-              <span>{qty}</span>
-              <button onClick={() => setQty((q) => q + 1)} aria-label="Increase">+</button>
+          {product.inStock ? (
+            <>
+              <div className="product-actions">
+                <div className="cart-qty qty-lg">
+                  <button onClick={() => setQty((q) => Math.max(1, q - 1))} aria-label="Decrease">−</button>
+                  <span>{qty}</span>
+                  <button onClick={() => setQty((q) => q + 1)} aria-label="Increase">+</button>
+                </div>
+                <button className="btn btn-full" onClick={() => handleAdd(false)}>Add to Cart</button>
+              </div>
+              <div className="product-actions">
+                <button className="btn btn-outline btn-full" onClick={() => handleAdd(true)}>Buy Now</button>
+                <button className="btn btn-outline wish-btn" onClick={() => toggleWishlist(product.id)}>
+                  {wished ? '♥ Wishlisted' : '♡ Wishlist'}
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="notify-box">
+              {notified ? (
+                <p className="notify-done">✓ Great! We’ll email you when <b>{product.name}</b> is back in stock.</p>
+              ) : (
+                <form className="notify-form" onSubmit={submitNotify}>
+                  <p className="notify-lead">This item is sold out — get an email the moment it’s restocked.</p>
+                  <div className="notify-row">
+                    <input
+                      type="email"
+                      required
+                      value={notifyEmail}
+                      onChange={(e) => setNotifyEmail(e.target.value)}
+                      placeholder="you@email.com"
+                    />
+                    <button className="btn" type="submit" disabled={notifyBusy}>
+                      {notifyBusy ? '…' : 'Notify me'}
+                    </button>
+                  </div>
+                  <button type="button" className="btn btn-outline wish-btn full-wish" onClick={() => toggleWishlist(product.id)}>
+                    {wished ? '♥ Wishlisted' : '♡ Add to Wishlist'}
+                  </button>
+                </form>
+              )}
             </div>
-            <button className="btn btn-full" disabled={!product.inStock} onClick={() => handleAdd(false)}>
-              {product.inStock ? 'Add to Cart' : 'Sold Out'}
-            </button>
-          </div>
-          <div className="product-actions">
-            <button className="btn btn-outline btn-full" disabled={!product.inStock} onClick={() => handleAdd(true)}>
-              Buy Now
-            </button>
-            <button className="btn btn-outline wish-btn" onClick={() => toggleWishlist(product.id)}>
-              {wished ? '♥ Wishlisted' : '♡ Wishlist'}
-            </button>
-          </div>
+          )}
+
+          <ShareButtons title={product.name} />
         </div>
       </div>
 
-      {/* REVIEWS */}
-      <section className="reviews">
-        <h2 className="section-title">Customer Reviews</h2>
-        <div className="review-list">
-          {product.reviewList?.map((r, i) => (
-            <div className="review-card" key={i}>
-              <div className="review-head">
-                <strong>{r.name}</strong>
-                <span className="arrival-stars">{'★'.repeat(r.rating)}</span>
-              </div>
-              <span className="review-date">{r.date}</span>
-              <p>{r.text}</p>
-            </div>
-          ))}
-        </div>
-      </section>
+      <ReviewsSection productId={product.id} initial={product.reviewList ?? []} />
+
+      <QASection productId={product.id} />
 
       {/* RELATED */}
       <section className="section">
@@ -165,6 +218,39 @@ export default function ProductDetailPage() {
           {related.map((p) => <ProductCard key={p.id} product={p} />)}
         </div>
       </section>
+
+      <RecentlyViewed excludeId={product.id} />
+
+      {/* Zoom lightbox */}
+      {zoom && (
+        <div className="zoom-overlay" onClick={() => setZoom(false)}>
+          <button className="zoom-close" onClick={() => setZoom(false)} aria-label="Close">×</button>
+          <img src={mainImg} alt={product.name} onClick={(e) => e.stopPropagation()} />
+        </div>
+      )}
+
+      {/* Size & wear guide */}
+      {sizeGuide && (
+        <div className="modal-overlay" onClick={() => setSizeGuide(false)}>
+          <div className="size-guide-modal" onClick={(e) => e.stopPropagation()}>
+            <button className="zoom-close dark" onClick={() => setSizeGuide(false)} aria-label="Close">×</button>
+            <h3>Size &amp; How to Wear 🎀</h3>
+            <table className="size-table">
+              <thead><tr><th>Size</th><th>Bow width</th><th>Best for</th></tr></thead>
+              <tbody>
+                <tr><td>S</td><td>7–9 cm</td><td>Babies &amp; toddlers, side clips</td></tr>
+                <tr><td>M</td><td>10–12 cm</td><td>Kids &amp; everyday styling</td></tr>
+                <tr><td>L</td><td>13–15 cm</td><td>Teens &amp; adults, statement looks</td></tr>
+              </tbody>
+            </table>
+            <ul className="wear-tips">
+              <li>Clip onto dry, brushed hair for the best hold.</li>
+              <li>For half-up styles, position just above the crown.</li>
+              <li>Store flat to keep the bow’s shape crisp.</li>
+            </ul>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

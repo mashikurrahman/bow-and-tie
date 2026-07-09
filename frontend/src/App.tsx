@@ -15,6 +15,8 @@ import ContactPage from './pages/ContactPage'
 import FaqPage from './pages/FaqPage'
 import CustomOrderPage from './pages/CustomOrderPage'
 import LoginPage from './pages/LoginPage'
+import ForgotPasswordPage from './pages/ForgotPasswordPage'
+import ResetPasswordPage from './pages/ResetPasswordPage'
 import AccountPage from './pages/AccountPage'
 import OrdersPage from './pages/OrdersPage'
 import OrderDetailPage from './pages/OrderDetailPage'
@@ -27,7 +29,12 @@ const AdminDashboard = lazy(() => import('./admin/pages/AdminDashboard'))
 const AdminOrders = lazy(() => import('./admin/pages/AdminOrders'))
 const AdminProducts = lazy(() => import('./admin/pages/AdminProducts'))
 const AdminProductForm = lazy(() => import('./admin/pages/AdminProductForm'))
+const AdminImport = lazy(() => import('./admin/pages/AdminImport'))
 const AdminCustomers = lazy(() => import('./admin/pages/AdminCustomers'))
+const AdminReports = lazy(() => import('./admin/pages/AdminReports'))
+const AdminQuestions = lazy(() => import('./admin/pages/AdminQuestions'))
+const AdminStaff = lazy(() => import('./admin/pages/AdminStaff'))
+const AdminOrderPrint = lazy(() => import('./admin/pages/AdminOrderPrint'))
 const AdminPromotions = lazy(() => import('./admin/pages/AdminPromotions'))
 const AdminCoupons = lazy(() => import('./admin/pages/AdminCoupons'))
 const AdminSettings = lazy(() => import('./admin/pages/AdminSettings'))
@@ -47,6 +54,8 @@ export default function App() {
         <Route path="/promotions/:id" element={<PromotionPage />} />
         <Route path="/wishlist" element={<WishlistPage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/account" element={<RequireAuth><AccountPage /></RequireAuth>} />
         <Route path="/orders" element={<RequireAuth><OrdersPage /></RequireAuth>} />
         <Route path="/orders/:id" element={<RequireAuth><OrderDetailPage /></RequireAuth>} />
@@ -73,10 +82,15 @@ export default function App() {
       >
         <Route index element={<AdminDashboard />} />
         <Route path="orders" element={<AdminOrders />} />
+        <Route path="orders/:id" element={<AdminOrderPrint />} />
         <Route path="products" element={<AdminProducts />} />
         <Route path="products/new" element={<AdminProductForm />} />
         <Route path="products/:id/edit" element={<AdminProductForm />} />
+        <Route path="import" element={<AdminImport />} />
         <Route path="customers" element={<AdminCustomers />} />
+        <Route path="reports" element={<AdminReports />} />
+        <Route path="questions" element={<AdminQuestions />} />
+        <Route path="staff" element={<AdminStaff />} />
         <Route path="promotions" element={<AdminPromotions />} />
         <Route path="coupons" element={<AdminCoupons />} />
         <Route path="settings" element={<AdminSettings />} />

@@ -34,6 +34,7 @@ export default function AdminProducts() {
       <div className="admin-card">
         <div className="admin-toolbar">
           <input className="admin-input grow" placeholder="Search products…" value={q} onChange={(e) => setQ(e.target.value)} />
+          <Link to="/admin/import" className="a-btn ghost">📦 Bulk Import</Link>
           <Link to="/admin/products/new" className="a-btn">＋ Add Product</Link>
         </div>
 

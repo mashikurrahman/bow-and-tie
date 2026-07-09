@@ -106,6 +106,19 @@ export default function CartDrawer() {
                 )
               })}
             </div>
+            {subtotal > 0 && subtotal <= FREE_SHIPPING_THRESHOLD && (
+              <div className="ship-nudge">
+                <div className="ship-nudge-text">
+                  Add <b>{formatPrice(FREE_SHIPPING_THRESHOLD - subtotal + 1)}</b> more for <b>FREE delivery</b> 🚚
+                </div>
+                <div className="ship-nudge-bar">
+                  <span style={{ width: `${Math.min(100, (subtotal / FREE_SHIPPING_THRESHOLD) * 100)}%` }} />
+                </div>
+              </div>
+            )}
+            {subtotal > FREE_SHIPPING_THRESHOLD && (
+              <div className="ship-nudge unlocked">🎉 You’ve unlocked <b>FREE delivery!</b></div>
+            )}
             <div className="cart-footer">
               <div className="cart-total-row">
                 <span>Subtotal</span>

@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { storeName } from '../data'
-import { useStore } from '../store/StoreContext'
+import { formatPrice, useStore } from '../store/StoreContext'
+import { useProducts } from '../store/ProductsContext'
 import { useAuth } from '../store/AuthContext'
 
 const logoUrl = '/logo-2.png'
@@ -17,6 +18,7 @@ const links = [
 
 export default function Navbar() {
   const { cartCount, wishlist, setCartOpen } = useStore()
+  const { products } = useProducts()
   const { isAuthed } = useAuth()
   const [menuOpen, setMenuOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
@@ -28,14 +30,32 @@ export default function Navbar() {
     if (searchOpen) searchRef.current?.focus()
   }, [searchOpen])
 
+  // Live suggestions as the shopper types (name or category match).
+  const suggestions = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (q.length < 2) return []
+    return products
+      .filter((p) => p.name.toLowerCase().includes(q) || p.category.toLowerCase().includes(q))
+      .slice(0, 6)
+  }, [query, products])
+
+  const closeSearch = () => {
+    setSearchOpen(false)
+    setMenuOpen(false)
+    setQuery('')
+  }
+
   const submitSearch = (e: React.FormEvent) => {
     e.preventDefault()
     if (query.trim()) {
       navigate(`/shop?q=${encodeURIComponent(query.trim())}`)
-      setSearchOpen(false)
-      setMenuOpen(false)
-      setQuery('')
+      closeSearch()
     }
+  }
+
+  const goToProduct = (id: string) => {
+    navigate(`/product/${id}`)
+    closeSearch()
   }
 
   return (
@@ -87,18 +107,37 @@ export default function Navbar() {
       </nav>
 
       {searchOpen && (
-        <form className="nav-search" onSubmit={submitSearch}>
-          <input
-            ref={searchRef}
-            type="search"
-            placeholder="Search bows, clips, silk…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-          <button type="submit" className="btn btn-sm">
-            Search
-          </button>
-        </form>
+        <div className="nav-search-wrap">
+          <form className="nav-search" onSubmit={submitSearch}>
+            <input
+              ref={searchRef}
+              type="search"
+              placeholder="Search bows, clips, silk…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+            <button type="submit" className="btn btn-sm">
+              Search
+            </button>
+          </form>
+          {query.trim().length >= 2 && (
+            <div className="search-suggest">
+              {suggestions.length === 0 ? (
+                <div className="search-suggest-empty">
+                  No matches for “{query.trim()}”. Try “bow”, “clip” or “silk”.
+                </div>
+              ) : (
+                suggestions.map((p) => (
+                  <button type="button" className="search-suggest-item" key={p.id} onClick={() => goToProduct(p.id)}>
+                    <img src={p.image} alt="" />
+                    <span className="ss-name">{p.name}</span>
+                    <span className="ss-price">{formatPrice(p.sale?.price ?? p.price)}</span>
+                  </button>
+                ))
+              )}
+            </div>
+          )}
+        </div>
       )}
     </>
   )

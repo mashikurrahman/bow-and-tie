@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../store/AuthContext'
 import { useStore } from '../store/StoreContext'
+import SocialLogin from '../components/SocialLogin'
 
 export default function LoginPage() {
   const { login, register } = useAuth()
@@ -66,12 +67,20 @@ export default function LoginPage() {
             <input required type="password" minLength={4} value={form.password} onChange={set('password')} placeholder="••••••••" />
           </div>
 
+          {mode === 'login' && (
+            <p className="auth-forgot">
+              <Link to="/forgot-password">Forgot your password?</Link>
+            </p>
+          )}
+
           {error && <p className="auth-error">{error}</p>}
 
           <button type="submit" className="btn btn-full" disabled={busy}>
             {busy ? 'Please wait…' : mode === 'login' ? 'Sign In' : 'Create Account'}
           </button>
         </form>
+
+        <SocialLogin redirectTo={redirectTo} />
 
         <p className="auth-alt">
           {mode === 'login' ? (

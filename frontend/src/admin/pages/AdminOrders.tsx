@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { admin } from '../../services/admin'
 import type { Order, OrderStatus } from '../../services/db'
 import { formatPrice } from '../../store/StoreContext'
@@ -73,7 +74,7 @@ export default function AdminOrders() {
             <tbody>
               {orders.map((o) => (
                 <tr key={o.id}>
-                  <td className="cell-strong">#{o.id}</td>
+                  <td className="cell-strong"><Link to={`/admin/orders/${o.id}`} className="admin-link">#{o.id}</Link></td>
                   <td>{o.customer.name}<div className="pid">{o.customer.phone}</div></td>
                   <td>{o.items.reduce((s, i) => s + i.quantity, 0)}</td>
                   <td className="cell-strong">{formatPrice(o.total)}</td>

@@ -1,20 +1,47 @@
 import { Router } from 'express'
+import multer from 'multer'
 import { z } from 'zod'
 import { prisma } from '../prisma'
 import { asyncHandler, HttpError } from '../middleware/error'
-import { requireAuth, requireAdmin } from '../middleware/auth'
+import { requireAuth, requireStaff, checkPermission, ADMIN_SECTIONS } from '../middleware/auth'
+import { hashPassword } from '../lib/auth'
 import { serializeOrder, serializeProduct } from '../lib/serialize'
 import { serializePromotion } from '../lib/promotions'
-import { ORDER_FLOW } from '../config'
+import { extractRows } from '../lib/importProducts'
+import { sendMailAsync } from '../lib/mailer'
+import { orderStatusEmail } from '../lib/emails'
+import { notifyRestock, cameBackInStock } from '../lib/stockAlerts'
+import { sendWhatsAppAsync, restockAlert, buildSalesReport } from '../lib/whatsapp'
+import { createConsignment, COURIERS } from '../lib/courier'
+import type { OrderEmailData } from '../lib/emails'
+import { ORDER_FLOW, config } from '../config'
 
 const router = Router()
-router.use(requireAuth, requireAdmin)
+router.use(requireAuth, requireStaff, checkPermission)
+
+// In-memory upload for bulk imports (parsed then discarded, never saved to disk).
+const importUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+})
 
 // Admin sees costPrice (kept out of the public product serializer so buying
 // cost is never exposed to shoppers).
 const withCost = (p: Parameters<typeof serializeProduct>[0] & { costPrice: number }) => ({
   ...serializeProduct(p),
   costPrice: p.costPrice,
+})
+
+// Shape a full order row into the data the email templates expect.
+const orderEmailDataFor = (o: {
+  id: string; subtotal: number; discount: number; shipping: number; total: number
+  customerName: string; customerAddress: string; customerCity: string; payment: string
+  items: { name: string; quantity: number; price: number }[]
+}): OrderEmailData => ({
+  id: o.id,
+  items: o.items.map((it) => ({ name: it.name, quantity: it.quantity, price: it.price })),
+  subtotal: o.subtotal, discount: o.discount, shipping: o.shipping, total: o.total,
+  customerName: o.customerName, customerAddress: o.customerAddress, customerCity: o.customerCity, payment: o.payment,
 })
 
 // ---- Dashboard stats -----------------------------------------------------
@@ -121,8 +148,65 @@ router.get(
   }),
 )
 
+// Single order (for the printable invoice / packing slip view).
+router.get(
+  '/orders/:id',
+  asyncHandler(async (req, res) => {
+    const order = await prisma.order.findUnique({ where: { id: req.params.id }, include: { items: true } })
+    if (!order) throw new HttpError(404, 'Order not found')
+    res.json({ order: serializeOrder(order) })
+  }),
+)
+
+// Ship an order via a courier — creates a consignment (mock if no creds), stores
+// the tracking code, marks it Shipped, and notifies the customer.
+router.post(
+  '/orders/:id/ship',
+  asyncHandler(async (req, res) => {
+    const { provider } = z.object({ provider: z.enum(COURIERS) }).parse(req.body)
+    const order = await prisma.order.findUnique({ where: { id: req.params.id }, include: { items: true } })
+    if (!order) throw new HttpError(404, 'Order not found')
+
+    const result = await createConsignment(provider, {
+      orderId: order.id,
+      name: order.customerName,
+      phone: order.customerPhone,
+      address: order.customerAddress,
+      city: order.customerCity,
+      amount: order.payment === 'cod' ? order.total : 0,
+      itemsCount: order.items.reduce((s, i) => s + i.quantity, 0),
+    })
+
+    let timeline: { status: string; at: string }[] = []
+    try {
+      timeline = JSON.parse(order.timeline)
+    } catch {
+      timeline = []
+    }
+    timeline.push({ status: 'Shipped', at: new Date().toISOString() })
+
+    const updated = await prisma.order.update({
+      where: { id: order.id },
+      data: { courier: provider, trackingCode: result.trackingCode, status: 'Shipped', timeline: JSON.stringify(timeline) },
+      include: { items: true },
+    })
+    if (updated.customerEmail) {
+      sendMailAsync(orderStatusEmail(updated.customerEmail, orderEmailDataFor(updated), 'Shipped'))
+    }
+    res.json({ order: serializeOrder(updated), tracking: result })
+  }),
+)
+
 const statusSchema = z.object({
-  status: z.enum(['Processing', 'Confirmed', 'Shipped', 'Delivered', 'Cancelled']),
+  status: z.enum([
+    'Processing',
+    'Confirmed',
+    'Shipped',
+    'Delivered',
+    'Cancelled',
+    'Return Requested',
+    'Returned',
+  ]),
 })
 
 router.patch(
@@ -143,6 +227,27 @@ router.patch(
       data: { status, timeline: JSON.stringify(timeline) },
       include: { items: true },
     })
+    // Email the customer about the status change (skip the initial Processing).
+    if (updated.customerEmail && status !== 'Processing') {
+      sendMailAsync(
+        orderStatusEmail(
+          updated.customerEmail,
+          {
+            id: updated.id,
+            items: updated.items.map((it) => ({ name: it.name, quantity: it.quantity, price: it.price })),
+            subtotal: updated.subtotal,
+            discount: updated.discount,
+            shipping: updated.shipping,
+            total: updated.total,
+            customerName: updated.customerName,
+            customerAddress: updated.customerAddress,
+            customerCity: updated.customerCity,
+            payment: updated.payment,
+          },
+          status,
+        ),
+      )
+    }
     res.json({ order: serializeOrder(updated) })
   }),
 )
@@ -243,6 +348,11 @@ router.put(
       },
       include: { reviews: true },
     })
+    // Restocked from zero? Email waiting customers + WhatsApp the admin.
+    if (cameBackInStock(existing.stock, product.stock)) {
+      void notifyRestock(product.id)
+      sendWhatsAppAsync(restockAlert(product.name, product.stock))
+    }
     res.json({ product: withCost(product) })
   }),
 )
@@ -254,6 +364,275 @@ router.delete(
       throw new HttpError(404, 'Product not found')
     })
     res.json({ ok: true })
+  }),
+)
+
+// ---- Bulk product import (CSV / Excel / PDF) ------------------------------
+
+// Build the Prisma create/update payload from a validated product row.
+const toProductData = (d: z.infer<typeof productSchema>) => {
+  const gallery = d.gallery.length ? d.gallery : [d.image].filter(Boolean)
+  return {
+    name: d.name,
+    category: d.category,
+    price: d.price,
+    originalPrice: d.originalPrice || d.price,
+    costPrice: d.costPrice,
+    stock: d.stock,
+    inStock: d.stock > 0,
+    badge: d.badge,
+    description: d.description,
+    fabric: d.fabric,
+    delivery: d.delivery,
+    colors: JSON.stringify(d.colors),
+    sizes: JSON.stringify(d.sizes),
+    gallery: JSON.stringify(gallery),
+    image: d.image || gallery[0] || '',
+    featured: d.featured,
+  }
+}
+
+// Step 1: parse + validate the file and return a preview (nothing is saved).
+router.post(
+  '/products/import',
+  importUpload.single('file'),
+  asyncHandler(async (req, res) => {
+    if (!req.file) throw new HttpError(400, 'No file uploaded (.csv, .xlsx, or .pdf)')
+
+    let mapped
+    try {
+      mapped = await extractRows(req.file.buffer, req.file.originalname)
+    } catch (e) {
+      throw new HttpError(400, e instanceof Error ? e.message : 'Could not read the file.')
+    }
+    if (!mapped.length) {
+      throw new HttpError(
+        400,
+        'No product rows found. Check that the file has a header row (name, category, price…) and at least one product.',
+      )
+    }
+
+    const prepared = mapped.map((m, i) => {
+      const parsed = productSchema.safeParse(m)
+      const errors = parsed.success
+        ? []
+        : parsed.error.issues.map((e) => `${e.path.join('.') || 'row'}: ${e.message}`)
+      // Business rule: a 0 price on import almost always means the cell was
+      // empty or couldn't be read — flag it instead of silently importing.
+      if (parsed.success && parsed.data.price <= 0) errors.push('price: must be greater than 0')
+
+      if (errors.length) {
+        return {
+          row: i + 2, // +2 = header row + 1-based
+          valid: false,
+          action: 'skip' as const,
+          id: m.id || slugify(m.name),
+          data: m,
+          errors,
+        }
+      }
+      const data = parsed.success ? parsed.data : m
+      const id = ('id' in data && data.id?.trim()) || slugify(m.name)
+      return {
+        row: i + 2,
+        valid: true,
+        action: 'create' as 'create' | 'update',
+        id,
+        data,
+        errors: [] as string[],
+      }
+    })
+
+    // Flag which valid rows would update an existing product vs create new.
+    const ids = prepared.filter((p) => p.valid && p.id).map((p) => p.id)
+    const existing = new Set(
+      (await prisma.product.findMany({ where: { id: { in: ids } }, select: { id: true } })).map((p) => p.id),
+    )
+    for (const p of prepared) if (p.valid) p.action = existing.has(p.id) ? 'update' : 'create'
+
+    const valid = prepared.filter((p) => p.valid)
+    res.json({
+      rows: prepared,
+      summary: {
+        total: prepared.length,
+        valid: valid.length,
+        invalid: prepared.length - valid.length,
+        toCreate: valid.filter((p) => p.action === 'create').length,
+        toUpdate: valid.filter((p) => p.action === 'update').length,
+      },
+    })
+  }),
+)
+
+// Step 2: commit the confirmed rows. Re-validated server-side (client prices
+// are never trusted). Creates new products and updates existing ones by id.
+router.post(
+  '/products/import/commit',
+  asyncHandler(async (req, res) => {
+    const body = z.object({ rows: z.array(z.record(z.unknown())) }).parse(req.body)
+    let created = 0
+    let updated = 0
+    const failed: { name: string; error: string }[] = []
+
+    for (const raw of body.rows) {
+      const parsed = productSchema.safeParse(raw)
+      if (!parsed.success || parsed.data.price <= 0) {
+        failed.push({
+          name: String((raw as Record<string, unknown>)?.name ?? 'Unknown'),
+          error: parsed.success ? 'price must be greater than 0' : parsed.error.issues[0]?.message ?? 'Invalid row',
+        })
+        continue
+      }
+      const d = parsed.data
+      const id = d.id?.trim() || slugify(d.name) || `product-${Date.now()}`
+      const data = toProductData(d)
+      const exists = await prisma.product.findUnique({ where: { id }, select: { stock: true } })
+      if (exists) {
+        await prisma.product.update({ where: { id }, data })
+        if (cameBackInStock(exists.stock, data.stock)) void notifyRestock(id)
+        updated++
+      } else {
+        await prisma.product.create({ data: { id, ...data } })
+        created++
+      }
+    }
+
+    res.json({ created, updated, failed })
+  }),
+)
+
+// ---- Product Q&A management ----------------------------------------------
+router.get(
+  '/questions',
+  asyncHandler(async (_req, res) => {
+    const [questions, products] = await Promise.all([
+      prisma.question.findMany({ orderBy: [{ answer: 'asc' }, { createdAt: 'desc' }] }),
+      prisma.product.findMany({ select: { id: true, name: true } }),
+    ])
+    const names = new Map(products.map((p) => [p.id, p.name]))
+    res.json({
+      questions: questions.map((q) => ({
+        id: q.id,
+        productId: q.productId,
+        productName: names.get(q.productId) ?? q.productId,
+        name: q.name,
+        question: q.question,
+        answer: q.answer ?? null,
+        createdAt: q.createdAt.toISOString(),
+      })),
+    })
+  }),
+)
+
+router.put(
+  '/questions/:id',
+  asyncHandler(async (req, res) => {
+    const { answer } = z.object({ answer: z.string().min(1).max(1000) }).parse(req.body)
+    const q = await prisma.question
+      .update({ where: { id: req.params.id }, data: { answer, answeredAt: new Date() } })
+      .catch(() => {
+        throw new HttpError(404, 'Question not found')
+      })
+    res.json({ question: { id: q.id, answer: q.answer } })
+  }),
+)
+
+router.delete(
+  '/questions/:id',
+  asyncHandler(async (req, res) => {
+    await prisma.question.delete({ where: { id: req.params.id } }).catch(() => {
+      throw new HttpError(404, 'Question not found')
+    })
+    res.json({ ok: true })
+  }),
+)
+
+// ---- WhatsApp alerts (test + on-demand report) ---------------------------
+router.post(
+  '/whatsapp/test',
+  asyncHandler(async (_req, res) => {
+    sendWhatsAppAsync('✅ Test alert from Bow & Tie — WhatsApp admin notifications are working!')
+    const configured = Boolean(config.whatsapp.token && config.whatsapp.phoneId && config.whatsapp.to)
+    res.json({ ok: true, configured })
+  }),
+)
+
+router.get(
+  '/whatsapp/report',
+  asyncHandler(async (req, res) => {
+    const month = req.query.period === 'month'
+    const text = await buildSalesReport(month ? 30 : 7, month ? 'Monthly' : 'Weekly')
+    sendWhatsAppAsync(text)
+    res.json({ ok: true, preview: text })
+  }),
+)
+
+// ---- Reports (date-range sales / profit analytics) -----------------------
+router.get(
+  '/reports',
+  asyncHandler(async (req, res) => {
+    const { from, to } = req.query as { from?: string; to?: string }
+    const start = from ? new Date(from) : new Date(0)
+    const end = to ? new Date(`${to}T23:59:59.999`) : new Date()
+
+    const [orders, products] = await Promise.all([
+      prisma.order.findMany({
+        where: { createdAt: { gte: start, lte: end }, status: { not: 'Cancelled' } },
+        include: { items: true },
+      }),
+      prisma.product.findMany({ select: { id: true, name: true, category: true, costPrice: true } }),
+    ])
+    const pmap = new Map(products.map((p) => [p.id, p]))
+
+    let productSales = 0
+    let cogs = 0
+    let unitsSold = 0
+    let orderTotal = 0
+    let discounts = 0
+    const byProduct = new Map<string, { id: string; name: string; category: string; qty: number; revenue: number; profit: number }>()
+    const byCategory = new Map<string, { category: string; qty: number; revenue: number; profit: number }>()
+
+    for (const o of orders) {
+      orderTotal += o.total
+      discounts += o.discount
+      for (const it of o.items) {
+        const p = it.productId ? pmap.get(it.productId) : undefined
+        const rev = it.price * it.quantity
+        const cost = (p?.costPrice ?? 0) * it.quantity
+        const profit = rev - cost
+        const cat = p?.category ?? 'Other'
+        productSales += rev
+        cogs += cost
+        unitsSold += it.quantity
+
+        const pk = it.productId ?? it.name
+        const pc = byProduct.get(pk) ?? { id: pk, name: it.name, category: cat, qty: 0, revenue: 0, profit: 0 }
+        pc.qty += it.quantity; pc.revenue += rev; pc.profit += profit
+        byProduct.set(pk, pc)
+
+        const cc = byCategory.get(cat) ?? { category: cat, qty: 0, revenue: 0, profit: 0 }
+        cc.qty += it.quantity; cc.revenue += rev; cc.profit += profit
+        byCategory.set(cat, cc)
+      }
+    }
+
+    const products_sorted = [...byProduct.values()].sort((a, b) => b.revenue - a.revenue)
+    res.json({
+      range: { from: start.toISOString(), to: end.toISOString() },
+      summary: {
+        orderCount: orders.length,
+        unitsSold,
+        productSales,
+        cogs,
+        grossProfit: productSales - cogs,
+        margin: productSales ? Math.round(((productSales - cogs) / productSales) * 100) : 0,
+        orderTotal,
+        discounts,
+        avgOrderValue: orders.length ? Math.round(orderTotal / orders.length) : 0,
+      },
+      byProduct: products_sorted,
+      byCategory: [...byCategory.values()].sort((a, b) => b.revenue - a.revenue),
+    })
   }),
 )
 
@@ -410,6 +789,92 @@ router.delete(
     await prisma.promo.delete({ where: { code: req.params.code } }).catch(() => {
       throw new HttpError(404, 'Coupon not found')
     })
+    res.json({ ok: true })
+  }),
+)
+
+// ---- Staff & permissions (admin only — gated by the 'staff' section) -----
+const validPerms = (arr: string[]) =>
+  arr.filter((p) => (ADMIN_SECTIONS as readonly string[]).includes(p) && p !== 'staff')
+
+const staffOut = (u: { id: string; name: string; email: string; role: string; permissions: string; createdAt: Date }) => ({
+  id: u.id,
+  name: u.name,
+  email: u.email,
+  role: u.role,
+  permissions: u.role === 'admin' ? [...ADMIN_SECTIONS] : validPerms(JSON.parse(u.permissions || '[]')),
+  createdAt: u.createdAt.toISOString(),
+})
+
+router.get(
+  '/staff',
+  asyncHandler(async (_req, res) => {
+    const staff = await prisma.user.findMany({
+      where: { role: { in: ['admin', 'staff'] } },
+      orderBy: { createdAt: 'asc' },
+      select: { id: true, name: true, email: true, role: true, permissions: true, createdAt: true },
+    })
+    res.json({ staff: staff.map(staffOut), sections: [...ADMIN_SECTIONS].filter((s) => s !== 'staff') })
+  }),
+)
+
+const staffSchema = z.object({
+  name: z.string().min(1),
+  email: z.string().email(),
+  password: z.string().min(4),
+  permissions: z.array(z.string()).default([]),
+})
+
+router.post(
+  '/staff',
+  asyncHandler(async (req, res) => {
+    const data = staffSchema.parse(req.body)
+    const email = data.email.toLowerCase()
+    if (await prisma.user.findUnique({ where: { email } })) {
+      throw new HttpError(409, 'A user with this email already exists.')
+    }
+    const user = await prisma.user.create({
+      data: {
+        name: data.name,
+        email,
+        password: await hashPassword(data.password),
+        role: 'staff',
+        permissions: JSON.stringify(validPerms(data.permissions)),
+      },
+    })
+    res.status(201).json({ staff: staffOut(user) })
+  }),
+)
+
+const staffUpdateSchema = z.object({
+  name: z.string().min(1).optional(),
+  permissions: z.array(z.string()).optional(),
+  password: z.string().min(4).optional(),
+})
+
+router.put(
+  '/staff/:id',
+  asyncHandler(async (req, res) => {
+    const data = staffUpdateSchema.parse(req.body)
+    const target = await prisma.user.findUnique({ where: { id: req.params.id } })
+    if (!target) throw new HttpError(404, 'User not found')
+    if (target.role === 'admin') throw new HttpError(400, "Admin accounts can't be edited here.")
+    const patch: { name?: string; permissions?: string; password?: string } = {}
+    if (data.name) patch.name = data.name
+    if (data.permissions) patch.permissions = JSON.stringify(validPerms(data.permissions))
+    if (data.password) patch.password = await hashPassword(data.password)
+    const user = await prisma.user.update({ where: { id: req.params.id }, data: patch })
+    res.json({ staff: staffOut(user) })
+  }),
+)
+
+router.delete(
+  '/staff/:id',
+  asyncHandler(async (req, res) => {
+    const target = await prisma.user.findUnique({ where: { id: req.params.id } })
+    if (!target) throw new HttpError(404, 'User not found')
+    if (target.role === 'admin') throw new HttpError(400, "Admin accounts can't be removed here.")
+    await prisma.user.delete({ where: { id: req.params.id } })
     res.json({ ok: true })
   }),
 )

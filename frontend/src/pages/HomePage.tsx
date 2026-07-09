@@ -33,7 +33,19 @@ export default function HomePage() {
   const newArrivals = products.slice(0, 8)
 
   const scrollBestsellers = (direction: number) => {
-    scrollRef.current?.scrollBy({ left: direction * 300, behavior: 'smooth' })
+    const el = scrollRef.current
+    if (!el) return
+    const maxScroll = el.scrollWidth - el.clientWidth
+    const atStart = el.scrollLeft <= 1
+    const atEnd = el.scrollLeft >= maxScroll - 1
+    // Loop around: past the end wraps to the start, before the start wraps to the end.
+    if (direction > 0 && atEnd) {
+      el.scrollTo({ left: 0, behavior: 'smooth' })
+    } else if (direction < 0 && atStart) {
+      el.scrollTo({ left: maxScroll, behavior: 'smooth' })
+    } else {
+      el.scrollBy({ left: direction * 300, behavior: 'smooth' })
+    }
   }
 
   return (
