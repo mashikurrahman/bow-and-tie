@@ -23,3 +23,7 @@ Thumbs.db
 # Design references
 _designs/
 *.zip
+
+# Superseded proposal files (kept locally, not in the repo)
+proposal/Bow-and-Tie-Proposal-Invoice.pdf
+proposal/bowtie-proposal-invoice.html
