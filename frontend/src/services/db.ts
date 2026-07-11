@@ -63,8 +63,13 @@ export type Order = {
   notes?: string
   promoCode?: string
   status: OrderStatus
+  returnReason?: string
+  refundStatus?: 'Requested' | 'Approved' | 'Rejected' | 'Refunded'
+  refundAmount?: number
+  refundMethod?: 'bkash' | 'nagad' | 'cash' | 'original'
+  refundedAt?: string
   createdAt: string
-  timeline: { status: OrderStatus; at: string }[]
+  timeline: { status: string; at: string }[]
 }
 
 export const ORDER_FLOW: OrderStatus[] = ['Processing', 'Confirmed', 'Shipped', 'Delivered']

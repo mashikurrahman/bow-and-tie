@@ -11,6 +11,8 @@ import { extractRows } from '../lib/importProducts'
 import { sendMailAsync } from '../lib/mailer'
 import { orderStatusEmail } from '../lib/emails'
 import { notifyRestock, cameBackInStock } from '../lib/stockAlerts'
+import { restockOrderItems } from '../lib/inventory'
+import { recomputeProductRating } from '../lib/reviews'
 import { sendWhatsAppAsync, restockAlert, buildSalesReport } from '../lib/whatsapp'
 import { createConsignment, COURIERS } from '../lib/courier'
 import type { OrderEmailData } from '../lib/emails'
@@ -24,6 +26,16 @@ const importUpload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
 })
+
+// Parse a JSON-string array column, tolerating bad data.
+const parseJsonArr = (s: string): string[] => {
+  try {
+    const v = JSON.parse(s)
+    return Array.isArray(v) ? v : []
+  } catch {
+    return []
+  }
+}
 
 // Admin sees costPrice (kept out of the public product serializer so buying
 // cost is never exposed to shoppers).
@@ -247,6 +259,102 @@ router.patch(
           status,
         ),
       )
+    }
+    res.json({ order: serializeOrder(updated) })
+  }),
+)
+
+// ---- Returns & refunds ---------------------------------------------------
+
+// The return/refund queue: every order a customer has asked to return.
+router.get(
+  '/returns',
+  asyncHandler(async (_req, res) => {
+    const orders = await prisma.order.findMany({
+      where: { refundStatus: { not: null } },
+      include: { items: true },
+      orderBy: { createdAt: 'desc' },
+    })
+    const counts = await prisma.order.groupBy({
+      by: ['refundStatus'],
+      where: { refundStatus: { not: null } },
+      _count: true,
+    })
+    res.json({
+      returns: orders.map(serializeOrder),
+      counts: Object.fromEntries(counts.map((c) => [c.refundStatus, c._count])),
+    })
+  }),
+)
+
+const refundSchema = z.object({
+  action: z.enum(['approve', 'reject', 'refund']),
+  amount: z.number().int().min(0).optional(),
+  method: z.enum(['bkash', 'nagad', 'cash', 'original']).optional(),
+})
+
+// Move a return through its lifecycle: approve → refund, or reject. Refunding
+// restocks the returned items (variant-aware) and records the amount/method.
+router.patch(
+  '/orders/:id/refund',
+  asyncHandler(async (req, res) => {
+    const { action, amount, method } = refundSchema.parse(req.body)
+    const order = await prisma.order.findUnique({ where: { id: req.params.id }, include: { items: true } })
+    if (!order) throw new HttpError(404, 'Order not found')
+    if (!order.refundStatus) throw new HttpError(409, 'No return has been requested for this order.')
+    if (order.refundStatus === 'Refunded') throw new HttpError(409, 'This order has already been refunded.')
+
+    const timeline = (() => {
+      try {
+        const v = JSON.parse(order.timeline)
+        return Array.isArray(v) ? (v as { status: string; at: string }[]) : []
+      } catch {
+        return []
+      }
+    })()
+    const now = new Date().toISOString()
+
+    let emailStatus = ''
+    const updated = await prisma.$transaction(async (tx) => {
+      if (action === 'approve') {
+        timeline.push({ status: 'Return Approved', at: now })
+        emailStatus = 'Return Approved'
+        return tx.order.update({
+          where: { id: order.id },
+          data: { refundStatus: 'Approved', status: 'Return Requested', timeline: JSON.stringify(timeline) },
+          include: { items: true },
+        })
+      }
+      if (action === 'reject') {
+        timeline.push({ status: 'Return Rejected', at: now })
+        emailStatus = 'Return Rejected'
+        return tx.order.update({
+          where: { id: order.id },
+          // Return the order to its prior fulfilled state.
+          data: { refundStatus: 'Rejected', status: 'Delivered', timeline: JSON.stringify(timeline) },
+          include: { items: true },
+        })
+      }
+      // action === 'refund' — money returned + goods back on the shelf.
+      await restockOrderItems(tx, order.items)
+      timeline.push({ status: 'Returned', at: now })
+      emailStatus = 'Refunded'
+      return tx.order.update({
+        where: { id: order.id },
+        data: {
+          refundStatus: 'Refunded',
+          refundAmount: amount ?? order.total,
+          refundMethod: method ?? 'original',
+          refundedAt: new Date(),
+          status: 'Returned',
+          timeline: JSON.stringify(timeline),
+        },
+        include: { items: true },
+      })
+    })
+
+    if (updated.customerEmail && emailStatus) {
+      sendMailAsync(orderStatusEmail(updated.customerEmail, orderEmailDataFor(updated), emailStatus))
     }
     res.json({ order: serializeOrder(updated) })
   }),
@@ -586,6 +694,118 @@ router.delete(
       throw new HttpError(404, 'Question not found')
     })
     res.json({ ok: true })
+  }),
+)
+
+// ---- Review moderation ---------------------------------------------------
+router.get(
+  '/reviews',
+  asyncHandler(async (req, res) => {
+    const { q } = req.query as { q?: string }
+    const [reviews, products] = await Promise.all([
+      prisma.review.findMany({ orderBy: { createdAt: 'desc' } }),
+      prisma.product.findMany({ select: { id: true, name: true } }),
+    ])
+    const names = new Map(products.map((p) => [p.id, p.name]))
+    const rows = reviews
+      .map((r) => ({
+        id: r.id,
+        productId: r.productId,
+        productName: names.get(r.productId) ?? r.productId,
+        name: r.name,
+        rating: r.rating,
+        title: r.title,
+        text: r.text,
+        images: parseJsonArr(r.images),
+        verified: r.verified,
+        hidden: r.hidden,
+        createdAt: r.createdAt.toISOString(),
+      }))
+      .filter((r) =>
+        q ? [r.productName, r.name, r.text, r.title].some((s) => s.toLowerCase().includes(q.toLowerCase())) : true,
+      )
+    res.json({ reviews: rows })
+  }),
+)
+
+// Hide/unhide a review (spam or abuse). Rating is recomputed from visible reviews.
+router.patch(
+  '/reviews/:id',
+  asyncHandler(async (req, res) => {
+    const { hidden } = z.object({ hidden: z.boolean() }).parse(req.body)
+    const review = await prisma.review.findUnique({ where: { id: req.params.id } })
+    if (!review) throw new HttpError(404, 'Review not found')
+    await prisma.review.update({ where: { id: review.id }, data: { hidden } })
+    await recomputeProductRating(review.productId)
+    res.json({ ok: true, hidden })
+  }),
+)
+
+router.delete(
+  '/reviews/:id',
+  asyncHandler(async (req, res) => {
+    const review = await prisma.review.findUnique({ where: { id: req.params.id } })
+    if (!review) throw new HttpError(404, 'Review not found')
+    await prisma.review.delete({ where: { id: review.id } })
+    await recomputeProductRating(review.productId)
+    res.json({ ok: true })
+  }),
+)
+
+// ---- Inventory (low-stock visibility, per SKU) ---------------------------
+router.get(
+  '/inventory',
+  asyncHandler(async (req, res) => {
+    const threshold = Math.max(0, Number(req.query.threshold) || 5)
+    const products = await prisma.product.findMany({
+      include: { variants: true },
+      orderBy: { name: 'asc' },
+    })
+    type InventoryRow = {
+      productId: string
+      productName: string
+      variantId?: string
+      label?: string
+      sku?: string
+      stock: number
+      price: number
+      image: string
+    }
+    // One row per stock-keeping unit: a variant row for each variant, or the
+    // product itself when it has none.
+    const rows: InventoryRow[] = products.flatMap((p): InventoryRow[] =>
+      p.variants.length > 0
+        ? p.variants.map((v) => ({
+            productId: p.id,
+            productName: p.name,
+            variantId: v.id,
+            label: v.label,
+            sku: v.sku ?? undefined,
+            stock: v.stock,
+            price: v.price,
+            image: v.image ?? p.image,
+          }))
+        : [{
+            productId: p.id,
+            productName: p.name,
+            variantId: undefined,
+            label: undefined,
+            sku: undefined,
+            stock: p.stock,
+            price: p.price,
+            image: p.image,
+          }],
+    )
+    rows.sort((a, b) => a.stock - b.stock)
+    res.json({
+      threshold,
+      rows,
+      summary: {
+        skuCount: rows.length,
+        outOfStock: rows.filter((r) => r.stock <= 0).length,
+        lowStock: rows.filter((r) => r.stock > 0 && r.stock <= threshold).length,
+      },
+    })
   }),
 )
 

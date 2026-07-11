@@ -107,6 +107,7 @@ model Review {
   text      String
   images    String   @default("[]") // JSON array of photo URLs
   verified  Boolean  @default(false) // true when the reviewer bought the product
+  hidden    Boolean  @default(false) // moderated out of public view (spam/abuse)
   createdAt DateTime @default(now())
 }
 
@@ -175,6 +176,14 @@ model Order {
   trackingCode    String?
   status          String      @default("Processing")
   timeline        String      @default("[]") // JSON array of { status, at }
+  // Return / refund tracking. refundStatus: null | "Requested" | "Approved" |
+  // "Rejected" | "Refunded". Set when a customer requests a return and updated
+  // by admin as the refund is processed.
+  returnReason    String?
+  refundStatus    String?
+  refundAmount    Int?
+  refundMethod    String? // "bkash" | "nagad" | "cash" | "original"
+  refundedAt      DateTime?
   createdAt       DateTime    @default(now())
 }
 

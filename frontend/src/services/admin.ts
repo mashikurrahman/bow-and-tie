@@ -110,6 +110,39 @@ export type Customer = {
   createdAt: string
 }
 
+export type AdminReview = {
+  id: string
+  productId: string
+  productName: string
+  name: string
+  rating: number
+  title: string
+  text: string
+  images: string[]
+  verified: boolean
+  hidden: boolean
+  createdAt: string
+}
+
+export type InventoryRow = {
+  productId: string
+  productName: string
+  variantId?: string
+  label?: string
+  sku?: string
+  stock: number
+  price: number
+  image: string
+}
+
+export type Inventory = {
+  threshold: number
+  rows: InventoryRow[]
+  summary: { skuCount: number; outOfStock: number; lowStock: number }
+}
+
+export type RefundAction = 'approve' | 'reject' | 'refund'
+
 export type ProductInput = {
   id?: string
   name: string
@@ -222,6 +255,23 @@ export const admin = {
   answerQuestion: (id: string, answer: string) =>
     api.put<{ question: { id: string; answer: string } }>(`/admin/questions/${id}`, { answer }),
   deleteQuestion: (id: string) => api.del<{ ok: boolean }>(`/admin/questions/${id}`),
+
+  // Returns & refunds
+  listReturns: () =>
+    api.get<{ returns: Order[]; counts: Record<string, number> }>('/admin/returns'),
+  refundOrder: (id: string, action: RefundAction, extra?: { amount?: number; method?: string }) =>
+    patch<{ order: Order }>(`/admin/orders/${id}/refund`, { action, ...extra }),
+
+  // Review moderation
+  listReviews: (q?: string) =>
+    api.get<{ reviews: AdminReview[] }>(`/admin/reviews${q ? `?q=${encodeURIComponent(q)}` : ''}`),
+  toggleReview: (id: string, hidden: boolean) =>
+    patch<{ ok: boolean; hidden: boolean }>(`/admin/reviews/${id}`, { hidden }),
+  deleteReview: (id: string) => api.del<{ ok: boolean }>(`/admin/reviews/${id}`),
+
+  // Inventory
+  listInventory: (threshold?: number) =>
+    api.get<Inventory>(`/admin/inventory${threshold != null ? `?threshold=${threshold}` : ''}`),
 
   // Promotions
   listPromotions: () => api.get<{ promotions: Promotion[] }>('/admin/promotions'),

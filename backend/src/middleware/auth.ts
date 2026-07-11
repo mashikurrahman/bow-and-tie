@@ -15,8 +15,8 @@ declare global {
 
 // Admin-panel sections a staff account can be granted access to.
 export const ADMIN_SECTIONS = [
-  'dashboard', 'products', 'import', 'orders', 'customers',
-  'promotions', 'coupons', 'reports', 'questions', 'settings', 'staff',
+  'dashboard', 'products', 'inventory', 'import', 'orders', 'returns', 'customers',
+  'promotions', 'coupons', 'reports', 'reviews', 'questions', 'settings', 'staff',
 ] as const
 
 const parsePerms = (s: string): string[] => {
@@ -106,12 +106,16 @@ export async function requireStaff(req: Request, res: Response, next: NextFuncti
 const PERM_MAP: [RegExp, string][] = [
   [/^\/stats/, 'dashboard'],
   [/^\/reports/, 'reports'],
+  [/^\/inventory/, 'inventory'],
   [/^\/products\/import/, 'import'],
   [/^\/products/, 'products'],
+  [/^\/orders\/[^/]+\/refund/, 'returns'],
+  [/^\/returns/, 'returns'],
   [/^\/orders/, 'orders'],
   [/^\/customers/, 'customers'],
   [/^\/promotions/, 'promotions'],
   [/^\/coupons/, 'coupons'],
+  [/^\/reviews/, 'reviews'],
   [/^\/questions/, 'questions'],
   [/^\/whatsapp/, 'dashboard'],
   [/^\/staff/, 'staff'],

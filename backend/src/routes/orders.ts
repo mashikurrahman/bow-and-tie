@@ -11,6 +11,7 @@ import { sendMailAsync } from '../lib/mailer'
 import { sendWhatsAppAsync, newOrderAlert, lowStockAlert } from '../lib/whatsapp'
 import { orderConfirmationEmail, orderStatusEmail, type OrderEmailData } from '../lib/emails'
 import { clearAbandonedCart } from '../lib/abandonedCart'
+import { restockOrderItems } from '../lib/inventory'
 
 const router = Router()
 
@@ -306,18 +307,8 @@ router.post(
     }
 
     const updated = await prisma.$transaction(async (tx) => {
-      // Return the reserved stock to inventory.
-      for (const it of order.items) {
-        if (it.productId) {
-          const p = await tx.product.findUnique({ where: { id: it.productId } })
-          if (p) {
-            await tx.product.update({
-              where: { id: p.id },
-              data: { stock: p.stock + it.quantity, inStock: true },
-            })
-          }
-        }
-      }
+      // Return the reserved stock to inventory (variant-aware).
+      await restockOrderItems(tx, order.items)
       const timeline = safeTimeline(order.timeline)
       timeline.push({ status: 'Cancelled', at: new Date().toISOString() })
       return tx.order.update({
@@ -349,6 +340,9 @@ router.post(
     if (order.status !== 'Delivered') {
       throw new HttpError(409, 'Returns can only be requested on delivered orders.')
     }
+    if (order.refundStatus && order.refundStatus !== 'Rejected') {
+      throw new HttpError(409, 'A return is already in progress for this order.')
+    }
     const timeline = safeTimeline(order.timeline)
     timeline.push({ status: 'Return Requested', at: new Date().toISOString() })
     const updated = await prisma.order.update({
@@ -356,7 +350,8 @@ router.post(
       data: {
         status: 'Return Requested',
         timeline: JSON.stringify(timeline),
-        notes: reason ? `${order.notes ? order.notes + ' | ' : ''}Return: ${reason}` : order.notes,
+        returnReason: reason ?? null,
+        refundStatus: 'Requested',
       },
       include: { items: true },
     })

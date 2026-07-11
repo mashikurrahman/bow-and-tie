@@ -104,6 +104,9 @@ export function orderStatusEmail(to: string, o: OrderEmailData, status: string):
     Shipped: 'Your order is on its way! 🚚 It has been handed over for delivery.',
     Delivered: 'Your order has been delivered. We hope you love it! 💝 Consider leaving a review.',
     Cancelled: 'Your order has been cancelled. If this is a mistake, please contact us.',
+    'Return Approved': 'Your return request has been approved. Please send the item(s) back and we’ll process your refund. 📦',
+    'Return Rejected': 'We’re sorry — your return request could not be approved. Please contact us if you have questions.',
+    Refunded: 'Your refund has been processed. 💸 It should reach you shortly via your chosen method.',
   }
   const msg = messages[status] ?? `Your order status has been updated to “${status}”.`
   const body = `

@@ -4,6 +4,7 @@ import { prisma } from '../prisma'
 import { asyncHandler, HttpError } from '../middleware/error'
 import { serializeProduct } from '../lib/serialize'
 import { attachSale, isPromotionLive } from '../lib/promotions'
+import { recomputeProductRating } from '../lib/reviews'
 import { requireAuth, optionalAuth } from '../middleware/auth'
 
 const router = Router()
@@ -71,13 +72,47 @@ router.get(
   }),
 )
 
+// "You may also like" — up to `limit` other products, same category first,
+// topped up with recent products so we always return a full row.
+router.get(
+  '/:id/related',
+  asyncHandler(async (req, res) => {
+    const limit = Math.min(Number(req.query.limit) || 4, 12)
+    const base = await prisma.product.findUnique({ where: { id: req.params.id }, select: { category: true } })
+    if (!base) throw new HttpError(404, 'Product not found')
+
+    const [sameCategory, promos] = await Promise.all([
+      prisma.product.findMany({
+        where: { category: base.category, id: { not: req.params.id } },
+        include: { reviews: true, variants: true },
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+      }),
+      livePromotions(),
+    ])
+
+    let picks = sameCategory
+    if (picks.length < limit) {
+      const exclude = [req.params.id, ...picks.map((p) => p.id)]
+      const fill = await prisma.product.findMany({
+        where: { id: { notIn: exclude } },
+        include: { reviews: true, variants: true },
+        orderBy: { createdAt: 'desc' },
+        take: limit - picks.length,
+      })
+      picks = [...picks, ...fill]
+    }
+    res.json({ products: picks.map((p) => attachSale(serializeProduct(p), promos)) })
+  }),
+)
+
 // ---- Reviews -------------------------------------------------------------
 
 router.get(
   '/:id/reviews',
   asyncHandler(async (req, res) => {
     const reviews = await prisma.review.findMany({
-      where: { productId: req.params.id },
+      where: { productId: req.params.id, hidden: false },
       orderBy: { createdAt: 'desc' },
     })
     res.json({ reviews: reviews.map(reviewOut) })
@@ -128,15 +163,13 @@ router.post(
       },
     })
 
-    // Recompute the product's average rating and review count.
-    const all = await prisma.review.findMany({ where: { productId }, select: { rating: true } })
-    const avg = all.reduce((s, r) => s + r.rating, 0) / all.length
-    await prisma.product.update({
-      where: { id: productId },
-      data: { rating: Math.round(avg * 10) / 10, reviewsCount: all.length },
-    })
+    // Recompute the product's average rating and review count (visible only).
+    await recomputeProductRating(productId)
 
-    const reviews = await prisma.review.findMany({ where: { productId }, orderBy: { createdAt: 'desc' } })
+    const reviews = await prisma.review.findMany({
+      where: { productId, hidden: false },
+      orderBy: { createdAt: 'desc' },
+    })
     res.status(201).json({ reviews: reviews.map(reviewOut), verified: Boolean(purchase) })
   }),
 )

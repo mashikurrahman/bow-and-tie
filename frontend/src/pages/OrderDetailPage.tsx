@@ -83,8 +83,17 @@ export default function OrderDetailPage() {
               Request a return
             </button>
           )}
-          {order.status === 'Return Requested' && (
-            <p className="order-return-note">↩️ A return has been requested. Our team will contact you shortly.</p>
+          {order.refundStatus === 'Requested' && (
+            <p className="order-return-note">↩️ A return has been requested. Our team will review it shortly.</p>
+          )}
+          {order.refundStatus === 'Approved' && (
+            <p className="order-return-note">✅ Your return is approved. Please send the item(s) back so we can process your refund.</p>
+          )}
+          {order.refundStatus === 'Refunded' && (
+            <p className="order-return-note">💸 Refunded{order.refundAmount ? ` ${formatPrice(order.refundAmount)}` : ''}{order.refundMethod && order.refundMethod !== 'original' ? ` via ${order.refundMethod}` : ''}. Thank you!</p>
+          )}
+          {order.refundStatus === 'Rejected' && (
+            <p className="order-return-note">Your return request was not approved. Please contact us if you have questions.</p>
           )}
         </div>
       </section>

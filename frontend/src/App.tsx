@@ -28,6 +28,9 @@ import { ShippingPage, ReturnsPage, PrivacyPage, NotFoundPage } from './pages/In
 const AdminLayout = lazy(() => import('./admin/AdminLayout'))
 const AdminDashboard = lazy(() => import('./admin/pages/AdminDashboard'))
 const AdminOrders = lazy(() => import('./admin/pages/AdminOrders'))
+const AdminReturns = lazy(() => import('./admin/pages/AdminReturns'))
+const AdminReviews = lazy(() => import('./admin/pages/AdminReviews'))
+const AdminInventory = lazy(() => import('./admin/pages/AdminInventory'))
 const AdminProducts = lazy(() => import('./admin/pages/AdminProducts'))
 const AdminProductForm = lazy(() => import('./admin/pages/AdminProductForm'))
 const AdminImport = lazy(() => import('./admin/pages/AdminImport'))
@@ -85,6 +88,9 @@ export default function App() {
         <Route index element={<AdminDashboard />} />
         <Route path="orders" element={<AdminOrders />} />
         <Route path="orders/:id" element={<AdminOrderPrint />} />
+        <Route path="returns" element={<AdminReturns />} />
+        <Route path="reviews" element={<AdminReviews />} />
+        <Route path="inventory" element={<AdminInventory />} />
         <Route path="products" element={<AdminProducts />} />
         <Route path="products/new" element={<AdminProductForm />} />
         <Route path="products/:id/edit" element={<AdminProductForm />} />

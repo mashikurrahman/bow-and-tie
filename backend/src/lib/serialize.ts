@@ -51,6 +51,7 @@ export function serializeProduct(p: Product & { reviews?: Review[]; variants?: P
     stock,
     variants,
     reviewList: (p.reviews ?? [])
+      .filter((r) => !r.hidden)
       .slice()
       .sort((a, b) => (b.createdAt?.getTime?.() ?? 0) - (a.createdAt?.getTime?.() ?? 0))
       .map((r) => ({
@@ -104,6 +105,11 @@ export function serializeOrder(o: Order & { items?: OrderItem[] }) {
     promoCode: o.promoCode ?? undefined,
     status: o.status,
     timeline,
+    returnReason: o.returnReason ?? undefined,
+    refundStatus: o.refundStatus ?? undefined,
+    refundAmount: o.refundAmount ?? undefined,
+    refundMethod: o.refundMethod ?? undefined,
+    refundedAt: o.refundedAt?.toISOString(),
     createdAt: o.createdAt.toISOString(),
   }
 }

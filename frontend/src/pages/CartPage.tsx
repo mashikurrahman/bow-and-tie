@@ -8,6 +8,7 @@ import {
   useStore,
 } from '../store/StoreContext'
 import { useProducts } from '../store/ProductsContext'
+import ProductCard from '../components/ProductCard'
 import { usePageMeta } from '../hooks/usePageMeta'
 
 export default function CartPage() {
@@ -16,6 +17,17 @@ export default function CartPage() {
   const { products } = useProducts()
   const shipping = subtotal === 0 || subtotal > FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FLAT
   const total = subtotal + shipping
+
+  // "You may also like" — products not already in the cart, from the same
+  // categories first, so shoppers can add a matching piece before checkout.
+  const inCart = new Set(cart.map((l) => l.productId))
+  const cartCategories = new Set(
+    cart.map((l) => products.find((p) => p.id === l.productId)?.category).filter(Boolean),
+  )
+  const crossSell = products
+    .filter((p) => !inCart.has(p.id) && p.inStock)
+    .sort((a, b) => Number(cartCategories.has(b.category)) - Number(cartCategories.has(a.category)))
+    .slice(0, 4)
 
   if (cart.length === 0) {
     return (
@@ -72,6 +84,15 @@ export default function CartPage() {
           <Link to="/shop" className="cart-view-link">Continue shopping</Link>
         </aside>
       </div>
+
+      {crossSell.length > 0 && (
+        <section className="section">
+          <div className="section-header"><h2 className="section-title">You May Also Like</h2></div>
+          <div className="arrivals-grid">
+            {crossSell.map((p) => <ProductCard key={p.id} product={p} />)}
+          </div>
+        </section>
+      )}
     </div>
   )
 }

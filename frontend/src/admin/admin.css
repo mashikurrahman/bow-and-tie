@@ -337,6 +337,22 @@
 .packing-cod { font-size: 1.3rem; font-weight: 800; color: var(--a-blue-dark); }
 .packing-slip { margin-top: 20px; }
 
+/* Returns / reviews / inventory shared bits */
+.return-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.row-muted { opacity: 0.55; }
+.review-stars { color: #f5a623; letter-spacing: 1px; white-space: nowrap; }
+
+.inv-stats { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+.inv-stat { flex: 1; min-width: 120px; background: var(--a-card, #fff); border: 1px solid var(--a-border); border-radius: 12px; padding: 14px 16px; cursor: pointer; text-align: left; transition: border-color 0.15s, box-shadow 0.15s; }
+.inv-stat:hover { border-color: var(--a-blue); }
+.inv-stat.active { border-color: var(--a-blue); box-shadow: 0 0 0 2px var(--a-blue-soft); }
+.inv-stat strong { display: block; font-size: 1.5rem; color: var(--a-text); }
+.inv-stat span { font-size: 0.78rem; color: var(--a-muted); }
+.inv-stat.low strong { color: #b7791f; }
+.inv-stat.out strong { color: #d64545; }
+.inv-prod { display: flex; align-items: center; gap: 10px; }
+.inv-thumb { width: 34px; height: 34px; border-radius: 8px; object-fit: cover; flex-shrink: 0; }
+
 @media print {
   .admin-sidebar, .admin-topbar, .admin-scrim, .no-print, .whatsapp-fab { display: none !important; }
   .admin, .admin-main, .admin-content { display: block; padding: 0; margin: 0; background: #fff; }

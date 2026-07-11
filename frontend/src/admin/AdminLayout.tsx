@@ -6,12 +6,15 @@ import './admin.css'
 const nav = [
   { to: '/admin', label: 'Dashboard', end: true, icon: '▦', perm: 'dashboard' },
   { to: '/admin/products', label: 'Products', icon: '🏷️', perm: 'products' },
+  { to: '/admin/inventory', label: 'Inventory', icon: '📊', perm: 'inventory' },
   { to: '/admin/import', label: 'Bulk Import', icon: '📦', perm: 'import' },
   { to: '/admin/orders', label: 'Orders', icon: '🧾', perm: 'orders' },
+  { to: '/admin/returns', label: 'Returns', icon: '↩️', perm: 'returns' },
   { to: '/admin/customers', label: 'Customers', icon: '👥', perm: 'customers' },
   { to: '/admin/reports', label: 'Reports', icon: '📈', perm: 'reports' },
   { to: '/admin/promotions', label: 'Promotions', icon: '🎯', perm: 'promotions' },
   { to: '/admin/coupons', label: 'Coupons', icon: '🎟️', perm: 'coupons' },
+  { to: '/admin/reviews', label: 'Reviews', icon: '⭐', perm: 'reviews' },
   { to: '/admin/questions', label: 'Q&A', icon: '💬', perm: 'questions' },
 ]
 
