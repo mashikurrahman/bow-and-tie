@@ -58,5 +58,26 @@ export function sendMailAsync(mail: MailInput): void {
   void sendMail(mail)
 }
 
+/**
+ * Send and REPORT the outcome (unlike sendMail which swallows errors). Used by
+ * the admin email-test endpoint to surface the real SMTP result for diagnosis.
+ */
+export async function sendMailResult(mail: MailInput): Promise<{ sent: boolean; error?: string }> {
+  const tx = getTransporter()
+  if (!tx) return { sent: false, error: 'SMTP not configured — set SMTP_HOST/SMTP_USER/SMTP_PASS.' }
+  try {
+    await tx.sendMail({
+      from: config.email.from,
+      to: mail.to,
+      subject: mail.subject,
+      html: mail.html,
+      text: mail.text ?? stripHtml(mail.html),
+    })
+    return { sent: true }
+  } catch (err) {
+    return { sent: false, error: err instanceof Error ? err.message : String(err) }
+  }
+}
+
 const stripHtml = (html: string) =>
   html.replace(/<style[\s\S]*?<\/style>/gi, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()

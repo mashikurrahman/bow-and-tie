@@ -8,7 +8,7 @@ import { hashPassword } from '../lib/auth'
 import { serializeOrder, serializeProduct } from '../lib/serialize'
 import { serializePromotion } from '../lib/promotions'
 import { extractRows } from '../lib/importProducts'
-import { sendMailAsync } from '../lib/mailer'
+import { sendMailAsync, sendMailResult } from '../lib/mailer'
 import { orderStatusEmail } from '../lib/emails'
 import { notifyRestock, cameBackInStock } from '../lib/stockAlerts'
 import { restockOrderItems } from '../lib/inventory'
@@ -805,6 +805,30 @@ router.get(
         outOfStock: rows.filter((r) => r.stock <= 0).length,
         lowStock: rows.filter((r) => r.stock > 0 && r.stock <= threshold).length,
       },
+    })
+  }),
+)
+
+// ---- Email diagnostics ---------------------------------------------------
+// Attempts a real send and returns the actual SMTP outcome, so email delivery
+// problems (bad creds, blocked IP, unverified sender) are visible immediately.
+router.post(
+  '/email/test',
+  asyncHandler(async (req, res) => {
+    const { to } = z.object({ to: z.string().email().optional() }).parse(req.body)
+    const fromAddr = config.email.from.match(/<([^>]+)>/)?.[1] ?? config.email.from
+    const target = to ?? fromAddr
+    const result = await sendMailResult({
+      to: target,
+      subject: 'Bow & Tie — email test ✅',
+      html: '<p>If you can read this, your Bow & Tie transactional email is working. 🎀</p>',
+    })
+    res.json({
+      target,
+      configured: Boolean(config.email.host),
+      host: config.email.host || null,
+      from: config.email.from,
+      ...result,
     })
   }),
 )

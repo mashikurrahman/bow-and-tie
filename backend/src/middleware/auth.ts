@@ -118,6 +118,7 @@ const PERM_MAP: [RegExp, string][] = [
   [/^\/reviews/, 'reviews'],
   [/^\/questions/, 'questions'],
   [/^\/whatsapp/, 'dashboard'],
+  [/^\/email/, 'settings'],
   [/^\/staff/, 'staff'],
 ]
 
