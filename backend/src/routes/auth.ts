@@ -8,16 +8,22 @@ import {
   signToken,
   signResetToken,
   verifyResetToken,
+  signVerifyToken,
+  verifyVerifyToken,
 } from '../lib/auth'
 import { requireAuth } from '../middleware/auth'
 import { serializeUser } from '../lib/user'
 import { sendMailAsync } from '../lib/mailer'
-import { welcomeEmail, passwordResetEmail } from '../lib/emails'
+import { welcomeEmail, passwordResetEmail, verificationEmail } from '../lib/emails'
 import { verifySocial } from '../lib/oauth'
 import { randomBytes } from 'node:crypto'
 import { config } from '../config'
 
 const router = Router()
+
+// Build the storefront link a customer clicks to confirm their email.
+const verifyUrlFor = (userId: string) =>
+  `${config.appUrl.replace(/\/$/, '')}/verify-email?id=${userId}&token=${signVerifyToken(userId)}`
 
 const registerSchema = z.object({
   name: z.string().min(1),
@@ -41,8 +47,10 @@ router.post(
       data: { name, email: email.toLowerCase(), password: await hashPassword(password) },
       include: { addresses: true },
     })
+    // Soft verification: the customer is signed in right away, but we email a
+    // confirmation link and nudge them (a banner) until they verify.
     const token = signToken({ userId: user.id, role: user.role })
-    sendMailAsync(welcomeEmail(user.email, user.name))
+    sendMailAsync(verificationEmail(user.email, user.name, verifyUrlFor(user.id)))
     res.status(201).json({ token, user: serializeUser(user) })
   }),
 )
@@ -81,12 +89,14 @@ router.post(
 
     let user = await prisma.user.findUnique({ where: { email: identity.email }, include: { addresses: true } })
     if (!user) {
-      // New social user — create with a random password they never use.
+      // New social user — create with a random password they never use. The
+      // provider already verified the email, so mark it verified.
       user = await prisma.user.create({
         data: {
           name: identity.name,
           email: identity.email,
           password: await hashPassword(randomBytes(24).toString('hex')),
+          emailVerified: true,
         },
         include: { addresses: true },
       })
@@ -125,6 +135,38 @@ router.post(
       throw new HttpError(400, 'This reset link is invalid or has expired. Please request a new one.')
     }
     await prisma.user.update({ where: { id }, data: { password: await hashPassword(password) } })
+    res.json({ ok: true })
+  }),
+)
+
+// Confirm an email from the link. Returns a fresh session so the customer is
+// signed in on whatever device they opened the link on.
+router.post(
+  '/verify-email',
+  asyncHandler(async (req, res) => {
+    const { id, token } = z.object({ id: z.string().min(1), token: z.string().min(1) }).parse(req.body)
+    const user = await prisma.user.findUnique({ where: { id }, include: { addresses: true } })
+    if (!user || !verifyVerifyToken(token, id)) {
+      throw new HttpError(400, 'This verification link is invalid or has expired. Please request a new one.')
+    }
+    const updated = user.emailVerified
+      ? user
+      : await prisma.user.update({ where: { id }, data: { emailVerified: true }, include: { addresses: true } })
+    const authToken = signToken({ userId: updated.id, role: updated.role })
+    res.json({ token: authToken, user: serializeUser(updated) })
+  }),
+)
+
+// Resend the verification email to the logged-in user (from the reminder banner).
+router.post(
+  '/resend-verification',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const user = await prisma.user.findUnique({ where: { id: req.user!.userId } })
+    if (!user) throw new HttpError(404, 'User not found')
+    if (!user.emailVerified) {
+      sendMailAsync(verificationEmail(user.email, user.name, verifyUrlFor(user.id)))
+    }
     res.json({ ok: true })
   }),
 )

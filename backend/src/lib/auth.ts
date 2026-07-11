@@ -32,3 +32,19 @@ export function verifyResetToken(token: string, passwordHash: string): boolean {
     return false
   }
 }
+
+// Email-verification tokens: a short-lived JWT tying the link to a user id.
+// Signed with the app secret (not the password hash) so it survives password
+// changes; expires in 24h.
+export function signVerifyToken(userId: string): string {
+  return jwt.sign({ userId, purpose: 'verify' }, config.jwtSecret, { expiresIn: '24h' })
+}
+
+export function verifyVerifyToken(token: string, userId: string): boolean {
+  try {
+    const payload = jwt.verify(token, config.jwtSecret) as { userId?: string; purpose?: string }
+    return payload.purpose === 'verify' && payload.userId === userId
+  } catch {
+    return false
+  }
+}

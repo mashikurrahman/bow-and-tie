@@ -39,8 +39,8 @@ async function main() {
   const customAdmin = Boolean(process.env.ADMIN_PASSWORD)
   await prisma.user.upsert({
     where: { email: adminEmail },
-    update: customAdmin ? { password: adminPass, role: 'admin' } : {},
-    create: { name: 'Store Admin', email: adminEmail, password: adminPass, role: 'admin' },
+    update: customAdmin ? { password: adminPass, role: 'admin', emailVerified: true } : { emailVerified: true },
+    create: { name: 'Store Admin', email: adminEmail, password: adminPass, role: 'admin', emailVerified: true },
   })
 
   // Demo customer — only seeded when NOT using custom admin creds (i.e. dev).
@@ -48,8 +48,8 @@ async function main() {
     const demoPass = await bcrypt.hash('demo123', 10)
     await prisma.user.upsert({
       where: { email: 'demo@bowclips.com' },
-      update: {},
-      create: { name: 'Demo Customer', email: 'demo@bowclips.com', password: demoPass, role: 'customer' },
+      update: { emailVerified: true },
+      create: { name: 'Demo Customer', email: 'demo@bowclips.com', password: demoPass, role: 'customer', emailVerified: true },
     })
   }
 

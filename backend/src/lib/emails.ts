@@ -117,6 +117,16 @@ export function orderStatusEmail(to: string, o: OrderEmailData, status: string):
   return { to, subject: `Order ${o.id} — ${status} · ${store}`, html: layout(`Order update: ${status}`, body, `Your order is now ${status}`) }
 }
 
+export function verificationEmail(to: string, name: string, verifyUrl: string): MailInput {
+  const body = `
+    <p style="font-size:14px;line-height:1.6;">Hi ${name}, welcome to ${store}! 🎀 One quick step — please confirm this is your email address.</p>
+    <p style="font-size:14px;line-height:1.6;">Verifying helps us keep your account secure and make sure order updates reach you.</p>
+    <div style="margin:22px 0 10px;">${button(verifyUrl, 'Verify my email')}</div>
+    <p style="font-size:12px;color:#9a929c;">This link expires in 24 hours. If you didn’t create an account, you can ignore this email.</p>
+    <p style="font-size:12px;color:#9a929c;word-break:break-all;">Or paste this link: ${verifyUrl}</p>`
+  return { to, subject: `Confirm your email · ${store}`, html: layout('Confirm your email', body, 'Verify your email to finish signing up') }
+}
+
 export function welcomeEmail(to: string, name: string): MailInput {
   const body = `
     <p style="font-size:14px;line-height:1.6;">Hi ${name}, welcome to ${store}! 🎀 We’re so glad you’re here.</p>

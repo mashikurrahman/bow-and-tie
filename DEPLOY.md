@@ -112,6 +112,52 @@ Open your Vercel URL and check:
 
 ---
 
+## Enabling email (Brevo) + Google login
+
+The store works without these, but customer email verification and social login
+need them configured. All values go in **Render → Settings → Environment** (the
+`VITE_*` ones go in **Vercel → Settings → Environment Variables**), then redeploy.
+
+### Transactional email — Brevo (free 300/day)
+
+1. Sign up at **brevo.com** → verify your account.
+2. Go to **SMTP & API → SMTP**. Note the server, port, login, and generate an
+   **SMTP key** (this is the password — not your Brevo login password).
+3. Add these on **Render**:
+
+   | Key | Value |
+   |-----|-------|
+   | `SMTP_HOST` | `smtp-relay.brevo.com` |
+   | `SMTP_PORT` | `587` |
+   | `SMTP_USER` | *your Brevo SMTP login (an email-looking string)* |
+   | `SMTP_PASS` | *the Brevo SMTP key* |
+   | `EMAIL_FROM` | `Bow & Tie <no-reply@yourdomain.com>` *(or your verified Brevo sender)* |
+
+   Until these are set, emails just print to the Render logs (nothing is sent).
+   Verification uses **soft** mode, so customers can still shop meanwhile — they
+   just see a "verify your email" banner.
+
+### Google login (free)
+
+1. Go to **console.cloud.google.com** → create a project (or reuse one).
+2. **APIs & Services → Credentials → Create Credentials → OAuth client ID**.
+   - If prompted, configure the **OAuth consent screen** (External, add your
+     email, app name "Bow & Tie") — you can leave it in "Testing".
+   - Application type: **Web application**.
+   - **Authorized JavaScript origins** — add your Vercel URL exactly:
+     `https://bow-and-ties.vercel.app`
+   - (No redirect URI needed — we use Google Identity Services.)
+3. Copy the **Client ID** (ends in `.apps.googleusercontent.com`).
+4. Set it in **both** places:
+
+   | Where | Key | Value |
+   |-------|-----|-------|
+   | Vercel | `VITE_GOOGLE_CLIENT_ID` | *the client ID* |
+   | Render | `GOOGLE_CLIENT_ID` | *the same client ID* |
+
+5. Redeploy both. The "Continue with Google" button appears automatically, and
+   Google users are auto-verified (no email step).
+
 ## Known limits of the free tier (fine for staging)
 
 - **Render sleeps after ~15 min idle.** The first request wakes it (~50 s).

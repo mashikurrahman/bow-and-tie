@@ -713,9 +713,42 @@
 .invoice-note { margin-top: 18px; font-size: 0.85rem; color: var(--text-light); }
 .invoice-foot { margin-top: 6px; font-size: 0.82rem; color: var(--text-muted); }
 
+/* Email-verification reminder banner (soft verification) */
+.verify-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  background: var(--pink-light);
+  color: #8a3f5a;
+  font-size: 0.88rem;
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--pink);
+  text-align: center;
+}
+.verify-banner-actions { display: inline-flex; align-items: center; gap: 10px; }
+.verify-banner button {
+  background: #c9527a;
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.verify-banner button:disabled { opacity: 0.6; cursor: not-allowed; }
+.verify-banner .verify-banner-x {
+  background: transparent;
+  color: #8a3f5a;
+  padding: 4px 8px;
+  font-size: 0.85rem;
+}
+
 /* Print: show only the invoice, hide the storefront chrome */
 @media print {
-  .navbar, .footer, .cart-overlay, .cart-panel, .toast-stack, .whatsapp-fab, .no-print { display: none !important; }
+  .navbar, .footer, .cart-overlay, .cart-panel, .toast-stack, .whatsapp-fab, .no-print, .verify-banner { display: none !important; }
   body { background: #fff; }
   main { padding: 0 !important; }
   .invoice-page { max-width: none; padding: 0; margin: 0; }

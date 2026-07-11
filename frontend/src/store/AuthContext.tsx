@@ -21,6 +21,8 @@ type AuthValue = {
   updateProfile: (patch: { name?: string; phone?: string }) => Promise<void>
   saveAddress: (address: Address) => Promise<void>
   removeAddress: (addressId: string) => Promise<void>
+  verifyEmail: (id: string, token: string) => Promise<void>
+  resendVerification: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthValue | null>(null)
@@ -70,6 +72,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(await auth.removeAddress(addressId))
   }, [])
 
+  const verifyEmail = useCallback(async (id: string, token: string) => {
+    setUser(await auth.verifyEmail(id, token))
+  }, [])
+
+  const resendVerification = useCallback(async () => {
+    await auth.resendVerification()
+  }, [])
+
   const value = useMemo<AuthValue>(
     () => ({
       user,
@@ -82,8 +92,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       updateProfile,
       saveAddress,
       removeAddress,
+      verifyEmail,
+      resendVerification,
     }),
-    [user, loading, register, login, oauth, logout, updateProfile, saveAddress, removeAddress],
+    [user, loading, register, login, oauth, logout, updateProfile, saveAddress, removeAddress, verifyEmail, resendVerification],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

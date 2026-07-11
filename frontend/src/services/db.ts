@@ -22,6 +22,7 @@ export type User = {
   phone?: string
   role: string
   permissions?: string[]
+  emailVerified?: boolean
   addresses: Address[]
   createdAt: string
 }
@@ -140,6 +141,18 @@ export const auth = {
 
   async resetPassword(id: string, token: string, password: string): Promise<void> {
     await api.post('/auth/reset-password', { id, token, password })
+  },
+
+  /** Confirm an email from the link; returns the now-verified, signed-in user. */
+  async verifyEmail(id: string, token: string): Promise<User> {
+    const { token: authToken, user } = await api.post<{ token: string; user: User }>('/auth/verify-email', { id, token })
+    setToken(authToken)
+    return user
+  },
+
+  /** Resend the verification email to the logged-in user. */
+  async resendVerification(): Promise<void> {
+    await api.post('/auth/resend-verification')
   },
 }
 

@@ -4,6 +4,7 @@ import Navbar from './Navbar'
 import Footer from './Footer'
 import CartDrawer from './CartDrawer'
 import Toasts from './Toasts'
+import VerifyBanner from './VerifyBanner'
 import { whatsappNumber } from '../data'
 
 function ScrollToTop() {
@@ -19,6 +20,7 @@ export default function Layout() {
     <>
       <ScrollToTop />
       <Navbar />
+      <VerifyBanner />
       <main>
         <Outlet />
       </main>

@@ -1,8 +1,8 @@
 import type { Address, User } from '@prisma/client'
 
 const ALL_SECTIONS = [
-  'dashboard', 'products', 'import', 'orders', 'customers',
-  'promotions', 'coupons', 'reports', 'questions', 'settings', 'staff',
+  'dashboard', 'products', 'inventory', 'import', 'orders', 'returns', 'customers',
+  'promotions', 'coupons', 'reports', 'reviews', 'questions', 'settings', 'staff',
 ]
 
 export function serializeUser(user: User & { addresses?: Address[] }) {
@@ -24,6 +24,7 @@ export function serializeUser(user: User & { addresses?: Address[] }) {
     phone: user.phone ?? undefined,
     role: user.role,
     permissions,
+    emailVerified: user.emailVerified,
     createdAt: user.createdAt.toISOString(),
     addresses: (user.addresses ?? []).map((a) => ({
       id: a.id,

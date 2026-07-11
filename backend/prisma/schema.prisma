@@ -21,16 +21,17 @@ generator client {
 }
 
 model User {
-  id          String    @id @default(cuid())
-  name        String
-  email       String    @unique
-  password    String
-  phone       String?
-  role        String    @default("customer") // "customer" | "admin" | "staff"
-  permissions String    @default("[]") // JSON array of section keys a staff user may access
-  addresses   Address[]
-  orders      Order[]
-  createdAt   DateTime  @default(now())
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  password      String
+  phone         String?
+  role          String    @default("customer") // "customer" | "admin" | "staff"
+  permissions   String    @default("[]") // JSON array of section keys a staff user may access
+  emailVerified Boolean   @default(false) // customer confirmed their email via the link
+  addresses     Address[]
+  orders        Order[]
+  createdAt     DateTime  @default(now())
 }
 
 model Address {

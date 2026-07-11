@@ -31,7 +31,7 @@ export default function LoginPage() {
         notify('Welcome back! 🎀')
       } else {
         await register(form)
-        notify('Account created — welcome! 🎀')
+        notify('Account created! 📧 Check your email to verify your address.')
       }
       navigate(redirectTo)
     } catch (err) {
