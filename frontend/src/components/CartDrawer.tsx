@@ -3,8 +3,9 @@ import { Link, useNavigate } from 'react-router-dom'
 import {
   FREE_SHIPPING_THRESHOLD,
   SHIPPING_FLAT,
-  effectivePrice,
   formatPrice,
+  lineKey,
+  lineUnitPrice,
   useStore,
 } from '../store/StoreContext'
 import { useProducts } from '../store/ProductsContext'
@@ -70,36 +71,36 @@ export default function CartDrawer() {
               {cart.map((line) => {
                 const product = products.find((p) => p.id === line.productId)
                 if (!product) return null
+                const key = lineKey(line)
+                const variant = product.variants?.find((v) => v.id === line.variantId)
+                const variantLabel = variant?.label ?? [line.color, line.size].filter(Boolean).join(' · ')
+                const unit = lineUnitPrice(product, line)
                 return (
-                  <div className="cart-item" key={`${line.productId}-${line.color}-${line.size}`}>
-                    <img className="cart-item-img" src={product.image} alt={product.name} />
+                  <div className="cart-item" key={key}>
+                    <img className="cart-item-img" src={variant?.image ?? product.image} alt={product.name} />
                     <div className="cart-item-main">
                       <div className="cart-item-top">
                         <span className="cart-item-name">{product.name}</span>
                         <button
                           className="cart-item-x"
-                          onClick={() => removeFromCart(line.productId)}
+                          onClick={() => removeFromCart(key)}
                           aria-label={`Remove ${product.name}`}
                         >
                           ✕
                         </button>
                       </div>
-                      {(line.color || line.size) && (
-                        <span className="cart-item-variant">
-                          {[line.color, line.size].filter(Boolean).join(' · ')}
-                        </span>
-                      )}
+                      {variantLabel && <span className="cart-item-variant">{variantLabel}</span>}
                       <span className="cart-item-unit">
-                        {formatPrice(effectivePrice(product))} each
+                        {formatPrice(unit)} each
                         {product.sale && <span className="cart-item-was">{formatPrice(product.price)}</span>}
                       </span>
                       <div className="cart-item-bottom">
                         <div className="qty-stepper">
-                          <button type="button" onClick={() => changeQuantity(line.productId, -1)} aria-label="Decrease quantity">−</button>
+                          <button type="button" onClick={() => changeQuantity(key, -1)} aria-label="Decrease quantity">−</button>
                           <span>{line.quantity}</span>
-                          <button type="button" onClick={() => changeQuantity(line.productId, 1)} aria-label="Increase quantity">+</button>
+                          <button type="button" onClick={() => changeQuantity(key, 1)} aria-label="Increase quantity">+</button>
                         </div>
-                        <span className="cart-item-linetotal">{formatPrice(effectivePrice(product) * line.quantity)}</span>
+                        <span className="cart-item-linetotal">{formatPrice(unit * line.quantity)}</span>
                       </div>
                     </div>
                   </div>

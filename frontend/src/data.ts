@@ -8,6 +8,17 @@ export type Review = {
   verified?: boolean
 }
 
+export type Variant = {
+  id: string
+  label: string
+  color?: string
+  size?: string
+  price: number
+  stock: number
+  image?: string
+  inStock: boolean
+}
+
 export type Product = {
   id: string
   name: string
@@ -29,6 +40,7 @@ export type Product = {
   gallery?: string[]
   reviewList?: Review[]
   stock?: number
+  variants?: Variant[]
   sale?: { price: number; percent: number; title: string; promotionId: string } | null
 }
 

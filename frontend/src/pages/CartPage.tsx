@@ -2,8 +2,9 @@ import { Link } from 'react-router-dom'
 import {
   FREE_SHIPPING_THRESHOLD,
   SHIPPING_FLAT,
-  effectivePrice,
   formatPrice,
+  lineKey,
+  lineUnitPrice,
   useStore,
 } from '../store/StoreContext'
 import { useProducts } from '../store/ProductsContext'
@@ -35,23 +36,25 @@ export default function CartPage() {
           {cart.map((line) => {
             const product = products.find((p) => p.id === line.productId)
             if (!product) return null
+            const key = lineKey(line)
+            const variant = product.variants?.find((v) => v.id === line.variantId)
+            const variantLabel = variant?.label ?? [line.color, line.size].filter(Boolean).join(' · ')
+            const unit = lineUnitPrice(product, line)
             return (
-              <div className="cart-line" key={`${line.productId}-${line.color}-${line.size}`}>
-                <img src={product.image} alt={product.name} />
+              <div className="cart-line" key={key}>
+                <img src={variant?.image ?? product.image} alt={product.name} />
                 <div className="cart-line-info">
                   <Link to={`/product/${product.id}`} className="cart-item-name">{product.name}</Link>
-                  {(line.color || line.size) && (
-                    <span className="cart-item-variant">{[line.color, line.size].filter(Boolean).join(' · ')}</span>
-                  )}
-                  <span className="cart-item-price">{formatPrice(effectivePrice(product))}{product.sale && <span className="arrival-og-price" style={{ marginLeft: 8 }}>{formatPrice(product.price)}</span>}</span>
+                  {variantLabel && <span className="cart-item-variant">{variantLabel}</span>}
+                  <span className="cart-item-price">{formatPrice(unit)}{product.sale && <span className="arrival-og-price" style={{ marginLeft: 8 }}>{formatPrice(product.price)}</span>}</span>
                 </div>
                 <div className="cart-qty">
-                  <button onClick={() => changeQuantity(line.productId, -1)} aria-label="Decrease">−</button>
+                  <button onClick={() => changeQuantity(key, -1)} aria-label="Decrease">−</button>
                   <span>{line.quantity}</span>
-                  <button onClick={() => changeQuantity(line.productId, 1)} aria-label="Increase">+</button>
+                  <button onClick={() => changeQuantity(key, 1)} aria-label="Increase">+</button>
                 </div>
-                <div className="cart-line-total">{formatPrice(effectivePrice(product) * line.quantity)}</div>
-                <button className="cart-remove" onClick={() => removeFromCart(line.productId)} aria-label="Remove">✕</button>
+                <div className="cart-line-total">{formatPrice(unit * line.quantity)}</div>
+                <button className="cart-remove" onClick={() => removeFromCart(key)} aria-label="Remove">✕</button>
               </div>
             )
           })}

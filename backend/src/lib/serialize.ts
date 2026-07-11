@@ -1,4 +1,4 @@
-import type { Order, OrderItem, Product, Review } from '@prisma/client'
+import type { Order, OrderItem, Product, ProductVariant, Review } from '@prisma/client'
 
 const parseArr = (s: string): string[] => {
   try {
@@ -10,12 +10,31 @@ const parseArr = (s: string): string[] => {
 }
 
 // Shape a Product row (with JSON-string columns) into the API/frontend shape.
-export function serializeProduct(p: Product & { reviews?: Review[] }) {
+export function serializeProduct(p: Product & { reviews?: Review[]; variants?: ProductVariant[] }) {
+  const variants = (p.variants ?? [])
+    .slice()
+    .sort((a, b) => a.sortOrder - b.sortOrder || a.createdAt.getTime() - b.createdAt.getTime())
+    .map((v) => ({
+      id: v.id,
+      label: v.label,
+      color: v.color ?? undefined,
+      size: v.size ?? undefined,
+      price: v.price,
+      stock: v.stock,
+      image: v.image ?? undefined,
+      inStock: v.stock > 0,
+    }))
+  const hasVariants = variants.length > 0
+  // When a product has variants, price/stock/availability are derived from them
+  // ("from" the cheapest variant); otherwise the product's own fields are used.
+  const price = hasVariants ? Math.min(...variants.map((v) => v.price)) : p.price
+  const stock = hasVariants ? variants.reduce((s, v) => s + v.stock, 0) : p.stock
+  const inStock = hasVariants ? variants.some((v) => v.stock > 0) : p.inStock
   return {
     id: p.id,
     name: p.name,
     category: p.category,
-    price: p.price,
+    price,
     originalPrice: p.originalPrice,
     rating: p.rating,
     reviews: p.reviewsCount,
@@ -27,9 +46,10 @@ export function serializeProduct(p: Product & { reviews?: Review[] }) {
     sizes: parseArr(p.sizes),
     gallery: parseArr(p.gallery),
     image: p.image,
-    inStock: p.inStock,
+    inStock,
     featured: p.featured,
-    stock: p.stock,
+    stock,
+    variants,
     reviewList: (p.reviews ?? [])
       .slice()
       .sort((a, b) => (b.createdAt?.getTime?.() ?? 0) - (a.createdAt?.getTime?.() ?? 0))
@@ -57,6 +77,7 @@ export function serializeOrder(o: Order & { items?: OrderItem[] }) {
     userId: o.userId,
     items: (o.items ?? []).map((it) => ({
       productId: it.productId,
+      variantId: it.variantId ?? undefined,
       name: it.name,
       image: it.image,
       price: it.price,

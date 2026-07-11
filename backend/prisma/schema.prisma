@@ -72,6 +72,27 @@ model Product {
   featured      Boolean  @default(false)
   createdAt     DateTime @default(now())
   reviews       Review[]
+  variants      ProductVariant[]
+}
+
+// An individual purchasable SKU of a product (e.g. "Blush / Small"), with its
+// own price, stock and optional image. Optional: a product with no variants
+// falls back to the product's own price & stock.
+model ProductVariant {
+  id        String   @id @default(cuid())
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId String
+  label     String // display name, e.g. "Blush / Small"
+  color     String?
+  size      String?
+  price     Int // whole BDT
+  stock     Int      @default(0)
+  image     String? // optional variant-specific photo
+  sku       String?
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([productId])
 }
 
 model Review {
@@ -162,6 +183,7 @@ model OrderItem {
   order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   orderId   String
   productId String?
+  variantId String? // the purchased SKU, when the product has variants
   name      String
   image     String
   price     Int

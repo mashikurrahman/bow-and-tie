@@ -50,6 +50,18 @@ export type AdminProduct = {
   image: string
   inStock: boolean
   featured: boolean
+  variants?: AdminVariant[]
+}
+
+export type AdminVariant = {
+  id: string
+  label: string
+  color?: string
+  size?: string
+  price: number
+  stock: number
+  image?: string
+  inStock: boolean
 }
 
 export type Stats = {
@@ -116,6 +128,17 @@ export type ProductInput = {
   image: string
   inStock: boolean
   featured: boolean
+  variants?: VariantInput[]
+}
+
+export type VariantInput = {
+  label: string
+  color?: string
+  size?: string
+  price: number
+  stock: number
+  image?: string
+  sku?: string
 }
 
 // Bulk import (CSV / Excel / PDF)

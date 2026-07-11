@@ -14,10 +14,15 @@ import { cartTracking } from '../services/db'
 
 export type CartLine = {
   productId: string
+  variantId?: string
   quantity: number
   color?: string
   size?: string
 }
+
+// Stable identity for a cart line: same product + variant + options = one line.
+export const lineKey = (l: { productId: string; variantId?: string; color?: string; size?: string }) =>
+  `${l.productId}|${l.variantId ?? ''}|${l.color ?? ''}|${l.size ?? ''}`
 
 type Toast = { id: number; message: string }
 
@@ -26,14 +31,14 @@ type StoreValue = {
   wishlist: string[]
   cartOpen: boolean
   setCartOpen: (open: boolean) => void
-  addToCart: (product: Product, opts?: { color?: string; size?: string; quantity?: number }) => void
-  changeQuantity: (productId: string, delta: number) => void
-  removeFromCart: (productId: string) => void
+  addToCart: (product: Product, opts?: { variantId?: string; color?: string; size?: string; quantity?: number }) => void
+  changeQuantity: (key: string, delta: number) => void
+  removeFromCart: (key: string) => void
   clearCart: () => void
   toggleWishlist: (productId: string) => void
   isWished: (productId: string) => boolean
   wishlistPriceWhenAdded: (productId: string) => number | undefined
-  reorder: (items: { productId: string | null; quantity: number; color?: string; size?: string }[]) => void
+  reorder: (items: { productId: string | null; variantId?: string; quantity: number; color?: string; size?: string }[]) => void
   cartCount: number
   subtotal: number
   toasts: Toast[]
@@ -100,7 +105,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const items = cart
       .map((l) => {
         const p = products.find((x) => x.id === l.productId)
-        return p ? { name: p.name, quantity: l.quantity, price: effectivePrice(p), image: p.image } : null
+        return p ? { name: p.name, quantity: l.quantity, price: lineUnitPrice(p, l), image: p.image } : null
       })
       .filter((x): x is NonNullable<typeof x> => Boolean(x))
     const timer = setTimeout(() => {
@@ -119,37 +124,31 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const addToCart: StoreValue['addToCart'] = useCallback(
     (product, opts) => {
       const quantity = opts?.quantity ?? 1
+      const incoming = { productId: product.id, variantId: opts?.variantId, color: opts?.color, size: opts?.size }
       setCart((current) => {
-        const existing = current.find(
-          (line) =>
-            line.productId === product.id &&
-            line.color === opts?.color &&
-            line.size === opts?.size,
-        )
+        const existing = current.find((line) => lineKey(line) === lineKey(incoming))
         if (existing) {
           return current.map((line) =>
             line === existing ? { ...line, quantity: line.quantity + quantity } : line,
           )
         }
-        return [...current, { productId: product.id, quantity, color: opts?.color, size: opts?.size }]
+        return [...current, { ...incoming, quantity }]
       })
       notify(`${product.name} added to cart`)
     },
     [notify],
   )
 
-  const changeQuantity: StoreValue['changeQuantity'] = useCallback((productId, delta) => {
+  const changeQuantity: StoreValue['changeQuantity'] = useCallback((key, delta) => {
     setCart((current) =>
       current
-        .map((line) =>
-          line.productId === productId ? { ...line, quantity: line.quantity + delta } : line,
-        )
+        .map((line) => (lineKey(line) === key ? { ...line, quantity: line.quantity + delta } : line))
         .filter((line) => line.quantity > 0),
     )
   }, [])
 
-  const removeFromCart: StoreValue['removeFromCart'] = useCallback((productId) => {
-    setCart((current) => current.filter((line) => line.productId !== productId))
+  const removeFromCart: StoreValue['removeFromCart'] = useCallback((key) => {
+    setCart((current) => current.filter((line) => lineKey(line) !== key))
   }, [])
 
   const clearCart = useCallback(() => setCart([]), [])
@@ -162,11 +161,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setCart((current) => {
         const next = current.map((l) => ({ ...l }))
         for (const it of valid) {
-          const existing = next.find(
-            (l) => l.productId === it.productId && l.color === it.color && l.size === it.size,
-          )
+          const line = { productId: it.productId as string, variantId: it.variantId, color: it.color, size: it.size }
+          const existing = next.find((l) => lineKey(l) === lineKey(line))
           if (existing) existing.quantity += it.quantity
-          else next.push({ productId: it.productId as string, quantity: it.quantity, color: it.color, size: it.size })
+          else next.push({ ...line, quantity: it.quantity })
         }
         return next
       })
@@ -212,7 +210,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const cartCount = cart.reduce((s, l) => s + l.quantity, 0)
   const subtotal = cart.reduce((sum, line) => {
     const product = products.find((p) => p.id === line.productId)
-    return sum + (product ? effectivePrice(product) * line.quantity : 0)
+    return sum + (product ? lineUnitPrice(product, line) * line.quantity : 0)
   }, 0)
 
   const value = useMemo<StoreValue>(
@@ -277,6 +275,15 @@ export const shippingFor = (zone: ShippingZone, subtotal: number) =>
 
 /** Price a customer actually pays — the promo sale price if one applies. */
 export const effectivePrice = (p: Product) => p.sale?.price ?? p.price
+
+/** Unit price for a cart line — the chosen variant's price, else the product's. */
+export const lineUnitPrice = (p: Product, line: { variantId?: string }) => {
+  if (line.variantId) {
+    const v = p.variants?.find((x) => x.id === line.variantId)
+    if (v) return v.price
+  }
+  return effectivePrice(p)
+}
 
 export const formatPrice = (value: number) =>
   new Intl.NumberFormat('en-BD', {

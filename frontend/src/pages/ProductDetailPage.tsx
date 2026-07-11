@@ -16,10 +16,11 @@ export default function ProductDetailPage() {
   const { id } = useParams()
   const { getProduct, getRelated } = useProducts()
   const product = id ? getProduct(id) : undefined
-  const { addToCart, setCartOpen, toggleWishlist, isWished } = useStore()
+  const { addToCart, setCartOpen, toggleWishlist, isWished, notify } = useStore()
   const { user } = useAuth()
   const [color, setColor] = useState<string>()
   const [size, setSize] = useState<string>()
+  const [variantId, setVariantId] = useState<string>()
   const [qty, setQty] = useState(1)
   const [activeImg, setActiveImg] = useState(0)
   const [zoom, setZoom] = useState(false)
@@ -64,6 +65,8 @@ export default function ProductDetailPage() {
     if (product) recordView(product.id)
     setActiveImg(0)
     setZoom(false)
+    // Default to the first in-stock variant (or the first, if all sold out).
+    setVariantId(product?.variants?.find((v) => v.inStock)?.id ?? product?.variants?.[0]?.id)
   }, [product])
 
   if (!product) {
@@ -75,19 +78,39 @@ export default function ProductDetailPage() {
     )
   }
 
-  const shownPrice = product.sale ? product.sale.price : product.price
-  const wasPrice = product.sale ? product.price : product.originalPrice
+  const variants = product.variants ?? []
+  const hasVariants = variants.length > 0
+  const selectedVariant = variants.find((v) => v.id === variantId)
+  const available = hasVariants ? !!selectedVariant?.inStock : product.inStock
+
+  const shownPrice = hasVariants
+    ? selectedVariant?.price ?? product.price
+    : product.sale ? product.sale.price : product.price
+  const wasPrice = hasVariants ? product.originalPrice : product.sale ? product.price : product.originalPrice
   const discount = wasPrice > shownPrice ? Math.round(((wasPrice - shownPrice) / wasPrice) * 100) : 0
   const related = getRelated(product)
   const wished = isWished(product.id)
-  const mainImg = product.gallery?.[activeImg] ?? product.image
+  const mainImg = selectedVariant?.image ?? product.gallery?.[activeImg] ?? product.image
 
   const handleAdd = (openCart: boolean) => {
-    addToCart(product, {
-      color: color ?? product.colors[0],
-      size: size ?? product.sizes[0],
-      quantity: qty,
-    })
+    if (hasVariants) {
+      if (!selectedVariant || !selectedVariant.inStock) {
+        notify('Please choose an available option')
+        return
+      }
+      addToCart(product, {
+        variantId: selectedVariant.id,
+        color: selectedVariant.color,
+        size: selectedVariant.size,
+        quantity: qty,
+      })
+    } else {
+      addToCart(product, {
+        color: color ?? product.colors[0],
+        size: size ?? product.sizes[0],
+        quantity: qty,
+      })
+    }
     if (openCart) setCartOpen(true)
   }
 
@@ -143,7 +166,7 @@ export default function ProductDetailPage() {
           </div>
           <div className="product-price-row">
             <span className="product-price">{formatPrice(shownPrice)}</span>
-            <span className="product-og-price">{formatPrice(wasPrice)}</span>
+            {wasPrice > shownPrice && <span className="product-og-price">{formatPrice(wasPrice)}</span>}
             {discount > 0 && <span className="product-discount">-{discount}%</span>}
           </div>
           {product.sale && <div className="product-sale-note">🎉 {product.sale.title} — {product.sale.percent}% off applied</div>}
@@ -152,43 +175,64 @@ export default function ProductDetailPage() {
           <div className="product-meta">
             <div><span>Fabric</span><strong>{product.fabric}</strong></div>
             <div><span>Delivery</span><strong>{product.delivery}</strong></div>
-            <div><span>Availability</span><strong className={product.inStock ? 'in' : 'out'}>{product.inStock ? 'In Stock' : 'Sold Out'}</strong></div>
+            <div><span>Availability</span><strong className={available ? 'in' : 'out'}>{available ? 'In Stock' : 'Sold Out'}</strong></div>
           </div>
 
-          <div className="product-option">
-            <label>Color</label>
-            <div className="option-chips">
-              {product.colors.map((c) => (
-                <button
-                  key={c}
-                  className={`chip ${(color ?? product.colors[0]) === c ? 'active' : ''}`}
-                  onClick={() => setColor(c)}
-                >
-                  {c}
-                </button>
-              ))}
+          {hasVariants ? (
+            <div className="product-option">
+              <label>Options</label>
+              <div className="option-chips">
+                {variants.map((v) => (
+                  <button
+                    key={v.id}
+                    type="button"
+                    className={`chip ${variantId === v.id ? 'active' : ''}`}
+                    onClick={() => setVariantId(v.id)}
+                    disabled={!v.inStock}
+                  >
+                    {v.label} · {formatPrice(v.price)}{!v.inStock ? ' — sold out' : ''}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          ) : (
+            <>
+              <div className="product-option">
+                <label>Color</label>
+                <div className="option-chips">
+                  {product.colors.map((c) => (
+                    <button
+                      key={c}
+                      className={`chip ${(color ?? product.colors[0]) === c ? 'active' : ''}`}
+                      onClick={() => setColor(c)}
+                    >
+                      {c}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-          <div className="product-option">
-            <div className="option-label-row">
-              <label>Size</label>
-              <button type="button" className="size-guide-link" onClick={() => setSizeGuide(true)}>📏 Size &amp; wear guide</button>
-            </div>
-            <div className="option-chips">
-              {product.sizes.map((s) => (
-                <button
-                  key={s}
-                  className={`chip ${(size ?? product.sizes[0]) === s ? 'active' : ''}`}
-                  onClick={() => setSize(s)}
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-          </div>
+              <div className="product-option">
+                <div className="option-label-row">
+                  <label>Size</label>
+                  <button type="button" className="size-guide-link" onClick={() => setSizeGuide(true)}>📏 Size &amp; wear guide</button>
+                </div>
+                <div className="option-chips">
+                  {product.sizes.map((s) => (
+                    <button
+                      key={s}
+                      className={`chip ${(size ?? product.sizes[0]) === s ? 'active' : ''}`}
+                      onClick={() => setSize(s)}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
 
-          {product.inStock ? (
+          {available ? (
             <>
               <div className="product-actions">
                 <div className="cart-qty qty-lg">

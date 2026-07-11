@@ -6,7 +6,7 @@ import { categories } from '../../data'
 const empty: ProductInput = {
   name: '', category: 'Bows', price: 0, originalPrice: 0, costPrice: 0, stock: 0,
   badge: '', description: '', fabric: '', delivery: '', colors: [], sizes: [],
-  gallery: [], image: '', inStock: true, featured: false,
+  gallery: [], image: '', inStock: true, featured: false, variants: [],
 }
 
 export default function AdminProductForm() {
@@ -30,6 +30,9 @@ export default function AdminProductForm() {
           costPrice: p.costPrice ?? 0, stock: p.stock, badge: p.badge, description: p.description,
           fabric: p.fabric, delivery: p.delivery, colors: p.colors, sizes: p.sizes,
           gallery: p.gallery, image: p.image, inStock: p.inStock, featured: p.featured,
+          variants: (p.variants ?? []).map((v) => ({
+            label: v.label, color: v.color, size: v.size, price: v.price, stock: v.stock, image: v.image,
+          })),
         })
         setImages(p.gallery.length ? p.gallery : [p.image].filter(Boolean))
       }
@@ -41,6 +44,16 @@ export default function AdminProductForm() {
 
   const num = (k: keyof ProductInput) => (e: React.ChangeEvent<HTMLInputElement>) =>
     set(k, Number(e.target.value) as never)
+
+  // Variant rows (optional). Each variant is its own SKU with its own price/stock.
+  type V = NonNullable<ProductInput['variants']>[number]
+  const variants = form.variants ?? []
+  const addVariant = () =>
+    setForm((f) => ({ ...f, variants: [...(f.variants ?? []), { label: '', color: '', size: '', price: f.price || 0, stock: 0 }] }))
+  const updateVariant = (i: number, patch: Partial<V>) =>
+    setForm((f) => ({ ...f, variants: (f.variants ?? []).map((v, idx) => (idx === i ? { ...v, ...patch } : v)) }))
+  const removeVariant = (i: number) =>
+    setForm((f) => ({ ...f, variants: (f.variants ?? []).filter((_, idx) => idx !== i) }))
 
   const upload = async (slot: number, file: File) => {
     setUploadingSlot(slot)
@@ -128,6 +141,29 @@ export default function AdminProductForm() {
           <div className="a-field-row">
             <div className="a-field"><label>Colors (comma separated)</label><input value={Array.isArray(form.colors) ? form.colors.join(', ') : form.colors} onChange={(e) => set('colors', e.target.value as never)} placeholder="Pink, Ivory" /></div>
             <div className="a-field"><label>Sizes (comma separated)</label><input value={Array.isArray(form.sizes) ? form.sizes.join(', ') : form.sizes} onChange={(e) => set('sizes', e.target.value as never)} placeholder="Small, Medium" /></div>
+          </div>
+
+          <div className="a-field">
+            <label>Variants (optional) — each is its own SKU</label>
+            <p className="a-hint">Add rows for colour/size options with their own price &amp; stock. When variants exist, the product’s own price shows as “from” the cheapest and stock is the total across variants.</p>
+            {variants.length > 0 && (
+              <div className="variant-editor">
+                <div className="variant-row variant-head">
+                  <span>Label</span><span>Colour</span><span>Size</span><span>Price ৳</span><span>Stock</span><span></span>
+                </div>
+                {variants.map((v, i) => (
+                  <div className="variant-row" key={i}>
+                    <input value={v.label} onChange={(e) => updateVariant(i, { label: e.target.value })} placeholder="Blush / S" />
+                    <input value={v.color ?? ''} onChange={(e) => updateVariant(i, { color: e.target.value })} placeholder="Blush" />
+                    <input value={v.size ?? ''} onChange={(e) => updateVariant(i, { size: e.target.value })} placeholder="S" />
+                    <input type="number" min="0" value={v.price} onChange={(e) => updateVariant(i, { price: Number(e.target.value) })} />
+                    <input type="number" min="0" value={v.stock} onChange={(e) => updateVariant(i, { stock: Number(e.target.value) })} />
+                    <button type="button" className="variant-del" onClick={() => removeVariant(i)} aria-label="Remove variant">✕</button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <button type="button" className="a-btn ghost" style={{ marginTop: 8 }} onClick={addVariant}>+ Add variant</button>
           </div>
 
           <div className="a-field"><label>Fabric</label><input value={form.fabric} onChange={(e) => set('fabric', e.target.value)} /></div>

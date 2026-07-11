@@ -4,8 +4,9 @@ import { whatsappNumber } from '../data'
 import {
   SHIPPING_ZONES,
   type ShippingZone,
-  effectivePrice,
   formatPrice,
+  lineKey,
+  lineUnitPrice,
   shippingFor,
   useStore,
 } from '../store/StoreContext'
@@ -79,14 +80,16 @@ export default function CheckoutPage() {
   const buildItems = (): OrderItem[] =>
     cart.map((l) => {
       const p = products.find((x) => x.id === l.productId)!
+      const v = p.variants?.find((x) => x.id === l.variantId)
       return {
         productId: l.productId,
+        variantId: l.variantId,
         name: p.name,
-        image: p.image,
-        price: p.price,
+        image: v?.image ?? p.image,
+        price: lineUnitPrice(p, l),
         quantity: l.quantity,
-        color: l.color,
-        size: l.size,
+        color: v?.color ?? l.color,
+        size: v?.size ?? l.size,
       }
     })
 
@@ -106,6 +109,7 @@ export default function CheckoutPage() {
       const order = await orderApi.create({
         items: cart.map((l) => ({
           productId: l.productId,
+          variantId: l.variantId,
           quantity: l.quantity,
           color: l.color,
           size: l.size,
@@ -225,14 +229,15 @@ export default function CheckoutPage() {
             {cart.map((l) => {
               const p = products.find((x) => x.id === l.productId)
               if (!p) return null
+              const v = p.variants?.find((x) => x.id === l.variantId)
               return (
-                <div className="checkout-item" key={`${l.productId}-${l.color}-${l.size}`}>
-                  <img src={p.image} alt={p.name} />
+                <div className="checkout-item" key={lineKey(l)}>
+                  <img src={v?.image ?? p.image} alt={p.name} />
                   <div>
                     <span className="cart-item-name">{p.name}</span>
-                    <span className="cart-item-variant">Qty {l.quantity}</span>
+                    <span className="cart-item-variant">{v ? `${v.label} · ` : ''}Qty {l.quantity}</span>
                   </div>
-                  <span>{formatPrice(effectivePrice(p) * l.quantity)}</span>
+                  <span>{formatPrice(lineUnitPrice(p, l) * l.quantity)}</span>
                 </div>
               )
             })}

@@ -257,12 +257,22 @@ router.get(
   '/products',
   asyncHandler(async (_req, res) => {
     const products = await prisma.product.findMany({
-      include: { reviews: true },
+      include: { reviews: true, variants: true },
       orderBy: { createdAt: 'desc' },
     })
     res.json({ products: products.map(withCost) })
   }),
 )
+
+const variantSchema = z.object({
+  label: z.string().default(''),
+  color: z.string().nullish(),
+  size: z.string().nullish(),
+  price: z.number().int().nonnegative(),
+  stock: z.number().int().nonnegative().default(0),
+  image: z.string().nullish(),
+  sku: z.string().nullish(),
+})
 
 const productSchema = z.object({
   id: z.string().min(1).optional(),
@@ -282,10 +292,32 @@ const productSchema = z.object({
   image: z.string().default(''),
   inStock: z.boolean().default(true),
   featured: z.boolean().default(false),
+  variants: z.array(variantSchema).default([]),
 })
 
 const slugify = (s: string) =>
   s.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+
+// Normalize incoming variant rows into Prisma create rows (drop blank ones).
+const mapVariants = (vs: z.infer<typeof variantSchema>[]) =>
+  vs
+    .filter((v) => v.price >= 0 && (v.label?.trim() || v.color || v.size))
+    .map((v, i) => ({
+      label: v.label?.trim() || [v.color, v.size].filter(Boolean).join(' / ') || 'Variant',
+      color: v.color || null,
+      size: v.size || null,
+      price: v.price,
+      stock: v.stock,
+      image: v.image || null,
+      sku: v.sku || null,
+      sortOrder: i,
+    }))
+
+// When a product has variants, its own stock/inStock are derived from them.
+const derivedStock = (variants: { stock: number }[], baseStock: number, baseInStock: boolean) =>
+  variants.length
+    ? { stock: variants.reduce((s, v) => s + v.stock, 0), inStock: variants.some((v) => v.stock > 0) }
+    : { stock: baseStock, inStock: baseInStock }
 
 router.post(
   '/products',
@@ -294,6 +326,8 @@ router.post(
     const id = data.id?.trim() || slugify(data.name) || `product-${Date.now()}`
     const exists = await prisma.product.findUnique({ where: { id } })
     if (exists) throw new HttpError(409, `A product with id "${id}" already exists.`)
+    const variants = mapVariants(data.variants)
+    const derived = derivedStock(variants, data.stock, data.inStock && data.stock > 0 ? true : data.inStock)
     const product = await prisma.product.create({
       data: {
         id,
@@ -302,8 +336,8 @@ router.post(
         price: data.price,
         originalPrice: data.originalPrice || data.price,
         costPrice: data.costPrice,
-        stock: data.stock,
-        inStock: data.inStock && data.stock > 0 ? true : data.inStock,
+        stock: derived.stock,
+        inStock: derived.inStock,
         badge: data.badge,
         description: data.description,
         fabric: data.fabric,
@@ -313,8 +347,9 @@ router.post(
         gallery: JSON.stringify(data.gallery.length ? data.gallery : [data.image].filter(Boolean)),
         image: data.image || data.gallery[0] || '',
         featured: data.featured,
+        variants: { create: variants },
       },
-      include: { reviews: true },
+      include: { reviews: true, variants: true },
     })
     res.status(201).json({ product: withCost(product) })
   }),
@@ -326,27 +361,34 @@ router.put(
     const data = productSchema.parse(req.body)
     const existing = await prisma.product.findUnique({ where: { id: req.params.id } })
     if (!existing) throw new HttpError(404, 'Product not found')
-    const product = await prisma.product.update({
-      where: { id: req.params.id },
-      data: {
-        name: data.name,
-        category: data.category,
-        price: data.price,
-        originalPrice: data.originalPrice || data.price,
-        costPrice: data.costPrice,
-        stock: data.stock,
-        inStock: data.inStock,
-        badge: data.badge,
-        description: data.description,
-        fabric: data.fabric,
-        delivery: data.delivery,
-        colors: JSON.stringify(data.colors),
-        sizes: JSON.stringify(data.sizes),
-        gallery: JSON.stringify(data.gallery.length ? data.gallery : [data.image].filter(Boolean)),
-        image: data.image || data.gallery[0] || existing.image,
-        featured: data.featured,
-      },
-      include: { reviews: true },
+    const variants = mapVariants(data.variants)
+    const derived = derivedStock(variants, data.stock, data.inStock)
+    // Replace the variant set atomically, then update the product.
+    const product = await prisma.$transaction(async (tx) => {
+      await tx.productVariant.deleteMany({ where: { productId: req.params.id } })
+      return tx.product.update({
+        where: { id: req.params.id },
+        data: {
+          name: data.name,
+          category: data.category,
+          price: data.price,
+          originalPrice: data.originalPrice || data.price,
+          costPrice: data.costPrice,
+          stock: derived.stock,
+          inStock: derived.inStock,
+          badge: data.badge,
+          description: data.description,
+          fabric: data.fabric,
+          delivery: data.delivery,
+          colors: JSON.stringify(data.colors),
+          sizes: JSON.stringify(data.sizes),
+          gallery: JSON.stringify(data.gallery.length ? data.gallery : [data.image].filter(Boolean)),
+          image: data.image || data.gallery[0] || existing.image,
+          featured: data.featured,
+          variants: { create: variants },
+        },
+        include: { reviews: true, variants: true },
+      })
     })
     // Restocked from zero? Email waiting customers + WhatsApp the admin.
     if (cameBackInStock(existing.stock, product.stock)) {

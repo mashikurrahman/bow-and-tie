@@ -157,6 +157,19 @@
 .a-field input:focus, .a-field textarea:focus, .a-field select:focus { border-color: var(--a-blue); }
 .a-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .a-hint { font-size: 0.72rem; color: var(--a-muted); }
+
+/* Product variant editor */
+.variant-editor { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.variant-row { display: grid; grid-template-columns: 1.4fr 1fr 0.8fr 0.9fr 0.8fr 30px; gap: 6px; align-items: center; }
+.variant-row input { width: 100%; min-width: 0; }
+.variant-head { font-size: 0.65rem; color: var(--a-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.variant-head span { padding-left: 3px; }
+.variant-del { border: none; background: #f3e6ec; color: #b03a68; border-radius: 6px; cursor: pointer; height: 32px; font-size: 0.8rem; }
+.variant-del:hover { background: #e9cdd9; }
+@media (max-width: 640px) {
+  .variant-row { grid-template-columns: 1fr 1fr; }
+  .variant-head { display: none; }
+}
 .a-check { display: flex; align-items: center; gap: 8px; font-size: 0.84rem; }
 .a-check input { width: auto; }
 .a-error { background: #fdeaea; color: #c0392b; padding: 10px 14px; border-radius: 10px; font-size: 0.8rem; margin-bottom: 12px; }

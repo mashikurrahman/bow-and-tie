@@ -28,6 +28,7 @@ export type User = {
 
 export type OrderItem = {
   productId: string | null
+  variantId?: string
   name: string
   image: string
   price: number
@@ -139,7 +140,7 @@ export const auth = {
 
 // ----- Orders -------------------------------------------------------------
 export type CreateOrderInput = {
-  items: { productId: string; quantity: number; color?: string; size?: string }[]
+  items: { productId: string; variantId?: string; quantity: number; color?: string; size?: string }[]
   customer: { name: string; email?: string; phone: string; address: string; city: string }
   deliveryZone?: 'inside' | 'outside'
   payment: 'cod' | 'bkash' | 'nagad'

@@ -46,12 +46,15 @@ export function saleForProduct(
   }
 }
 
-/** Attach a `sale` field to an already-serialized product when a promo applies. */
-export function attachSale<T extends { id: string; price: number }>(
+/** Attach a `sale` field to an already-serialized product when a promo applies.
+ * Products with their own variants use absolute per-variant prices, so promos
+ * are not stacked on top of them. */
+export function attachSale<T extends { id: string; price: number; variants?: unknown[] }>(
   product: T,
   livePromotions: Promotion[],
 ): T & { sale: Sale | null } {
-  return { ...product, sale: saleForProduct(product.price, product.id, livePromotions) }
+  const sale = product.variants && product.variants.length > 0 ? null : saleForProduct(product.price, product.id, livePromotions)
+  return { ...product, sale }
 }
 
 export function serializePromotion(p: Promotion) {

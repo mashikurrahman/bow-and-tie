@@ -56,6 +56,7 @@ const createSchema = z.object({
     .array(
       z.object({
         productId: z.string(),
+        variantId: z.string().optional(),
         quantity: z.number().int().positive(),
         color: z.string().optional(),
         size: z.string().optional(),
@@ -96,6 +97,7 @@ router.post(
     const order = await prisma.$transaction(async (tx) => {
       const lineItems: {
         productId: string
+        variantId?: string
         name: string
         image: string
         price: number
@@ -110,32 +112,73 @@ router.post(
         isPromotionLive(p),
       )
 
+      const t = config.whatsapp.lowStockThreshold
       for (const line of input.items) {
-        const product = await tx.product.findUnique({ where: { id: line.productId } })
-        if (!product) throw new HttpError(400, `Unknown product: ${line.productId}`)
-        if (!product.inStock) throw new HttpError(409, `${product.name} is sold out.`)
-        const sale = saleForProduct(product.price, product.id, livePromos)
-        const unitPrice = sale?.price ?? product.price
-        subtotal += unitPrice * line.quantity
-        lineItems.push({
-          productId: product.id,
-          name: product.name,
-          image: product.image,
-          price: unitPrice,
-          quantity: line.quantity,
-          color: line.color,
-          size: line.size,
+        const product = await tx.product.findUnique({
+          where: { id: line.productId },
+          include: { variants: true },
         })
-        // Decrement stock (custom items use a large sentinel stock).
-        if (product.stock > 0) {
-          const newStock = Math.max(0, product.stock - line.quantity)
+        if (!product) throw new HttpError(400, `Unknown product: ${line.productId}`)
+
+        if (product.variants.length > 0) {
+          // Variant product: a specific SKU must be chosen; price & stock come
+          // from that variant. Promotions are not stacked on variant prices.
+          const variant = line.variantId
+            ? product.variants.find((v) => v.id === line.variantId)
+            : undefined
+          if (!variant) throw new HttpError(400, `Please choose an option for ${product.name}.`)
+          if (variant.stock < line.quantity) {
+            throw new HttpError(409, `${product.name} (${variant.label}) — only ${variant.stock} left.`)
+          }
+          subtotal += variant.price * line.quantity
+          lineItems.push({
+            productId: product.id,
+            variantId: variant.id,
+            name: product.name,
+            image: variant.image ?? product.image,
+            price: variant.price,
+            quantity: line.quantity,
+            color: variant.color ?? undefined,
+            size: variant.size ?? undefined,
+          })
+          // Decrement the variant, then recompute the product's aggregate stock.
+          const newVarStock = variant.stock - line.quantity
+          await tx.productVariant.update({ where: { id: variant.id }, data: { stock: newVarStock } })
+          const remaining = product.variants.reduce(
+            (s, v) => s + (v.id === variant.id ? newVarStock : v.stock),
+            0,
+          )
           await tx.product.update({
             where: { id: product.id },
-            data: { stock: newStock, inStock: newStock > 0 },
+            data: { stock: remaining, inStock: remaining > 0 },
           })
-          // Flag products that just crossed the low-stock threshold.
-          const t = config.whatsapp.lowStockThreshold
-          if (product.stock > t && newStock <= t) lowStockHits.push({ name: product.name, stock: newStock })
+          if (variant.stock > t && newVarStock <= t) {
+            lowStockHits.push({ name: `${product.name} (${variant.label})`, stock: newVarStock })
+          }
+        } else {
+          // No variants: product-level price + stock (promotions apply).
+          if (!product.inStock) throw new HttpError(409, `${product.name} is sold out.`)
+          const sale = saleForProduct(product.price, product.id, livePromos)
+          const unitPrice = sale?.price ?? product.price
+          subtotal += unitPrice * line.quantity
+          lineItems.push({
+            productId: product.id,
+            name: product.name,
+            image: product.image,
+            price: unitPrice,
+            quantity: line.quantity,
+            color: line.color,
+            size: line.size,
+          })
+          // Decrement stock (custom items use a large sentinel stock).
+          if (product.stock > 0) {
+            const newStock = Math.max(0, product.stock - line.quantity)
+            await tx.product.update({
+              where: { id: product.id },
+              data: { stock: newStock, inStock: newStock > 0 },
+            })
+            if (product.stock > t && newStock <= t) lowStockHits.push({ name: product.name, stock: newStock })
+          }
         }
       }
 

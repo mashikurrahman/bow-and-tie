@@ -50,7 +50,7 @@ router.get(
           ...(category && category !== 'All' ? { category } : {}),
           ...(q ? { OR: [{ name: { contains: q } }, { description: { contains: q } }] } : {}),
         },
-        include: { reviews: true },
+        include: { reviews: true, variants: true },
         orderBy: { createdAt: 'asc' },
       }),
       livePromotions(),
@@ -63,7 +63,7 @@ router.get(
   '/:id',
   asyncHandler(async (req, res) => {
     const [product, promos] = await Promise.all([
-      prisma.product.findUnique({ where: { id: req.params.id }, include: { reviews: true } }),
+      prisma.product.findUnique({ where: { id: req.params.id }, include: { reviews: true, variants: true } }),
       livePromotions(),
     ])
     if (!product) throw new HttpError(404, 'Product not found')
