@@ -18,6 +18,19 @@ router.get(
   }),
 )
 
+// Validate a checkout coupon code against the live Promo table. Returns the
+// discount rate if the code exists and is active, else 404. (Kept above /:id
+// so "coupon" isn't treated as a promotion id.)
+router.get(
+  '/coupon/:code',
+  asyncHandler(async (req, res) => {
+    const code = req.params.code.trim().toUpperCase()
+    const promo = await prisma.promo.findUnique({ where: { code } })
+    if (!promo || !promo.active) throw new HttpError(404, 'This promo code is invalid or has expired.')
+    res.json({ code: promo.code, rate: promo.rate, label: promo.label })
+  }),
+)
+
 // A single promotion + the products it discounts (for the sale landing page).
 router.get(
   '/:id',

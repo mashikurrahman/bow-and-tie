@@ -64,8 +64,8 @@ export default function CheckoutPage() {
     if (a) setForm((f) => ({ ...f, name: a.name, phone: a.phone, address: a.address, city: a.city }))
   }
 
-  const checkPromo = () => {
-    const rate = applyPromo(promo)
+  const checkPromo = async () => {
+    const rate = await applyPromo(promo)
     if (rate) {
       setDiscountRate(rate)
       setAppliedCode(promo.trim().toUpperCase())

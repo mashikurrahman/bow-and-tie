@@ -7,7 +7,8 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import { promoCodes, type Product } from '../data'
+import { type Product } from '../data'
+import { coupons } from '../services/db'
 import { useProducts } from './ProductsContext'
 import { useAuth } from './AuthContext'
 import { cartTracking } from '../services/db'
@@ -43,7 +44,7 @@ type StoreValue = {
   subtotal: number
   toasts: Toast[]
   notify: (message: string) => void
-  applyPromo: (code: string) => number | null
+  applyPromo: (code: string) => Promise<number | null>
 }
 
 const StoreContext = createContext<StoreValue | null>(null)
@@ -202,9 +203,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [wishPrices],
   )
 
-  const applyPromo = useCallback((code: string) => {
-    const rate = promoCodes[code.trim().toUpperCase()]
-    return rate ?? null
+  const applyPromo = useCallback(async (code: string) => {
+    const res = await coupons.validate(code)
+    return res ? res.rate : null
   }, [])
 
   const cartCount = cart.reduce((s, l) => s + l.quantity, 0)

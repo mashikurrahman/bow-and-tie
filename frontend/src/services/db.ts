@@ -280,6 +280,20 @@ export const cartTracking = {
   },
 }
 
+// ----- Coupons ------------------------------------------------------------
+export const coupons = {
+  /** Validate a checkout code against the live coupon table; null if invalid. */
+  async validate(code: string): Promise<{ code: string; rate: number } | null> {
+    try {
+      return await api.get<{ code: string; rate: number; label?: string }>(
+        `/promotions/coupon/${encodeURIComponent(code.trim().toUpperCase())}`,
+      )
+    } catch {
+      return null
+    }
+  },
+}
+
 // ----- Newsletter ---------------------------------------------------------
 export const newsletter = {
   async subscribe(email: string): Promise<{ code: string }> {
