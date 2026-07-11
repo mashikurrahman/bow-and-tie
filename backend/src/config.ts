@@ -18,9 +18,12 @@ export const config = {
   // Public storefront URL, used to build links inside emails (reset, orders…).
   appUrl: process.env.APP_URL ?? process.env.CORS_ORIGIN ?? 'http://localhost:5173',
   storeName: process.env.STORE_NAME ?? 'Bow & Tie',
-  // Transactional email (SMTP). Leave SMTP_HOST empty in dev — emails are then
-  // logged to the console instead of being sent (nothing breaks without creds).
+  // Transactional email. Prefer the Brevo HTTP API (BREVO_API_KEY) — it works
+  // over HTTPS (443), which hosts like Render allow, unlike outbound SMTP ports
+  // (25/465/587) which Render blocks. Falls back to SMTP if only SMTP_* is set;
+  // if neither is set, emails are logged to the console (dev).
   email: {
+    brevoApiKey: process.env.BREVO_API_KEY ?? '',
     host: process.env.SMTP_HOST ?? '',
     port: Number(process.env.SMTP_PORT ?? 587),
     user: process.env.SMTP_USER ?? '',

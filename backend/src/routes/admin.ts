@@ -825,8 +825,8 @@ router.post(
     })
     res.json({
       target,
-      configured: Boolean(config.email.host),
-      host: config.email.host || null,
+      configured: Boolean(config.email.brevoApiKey || config.email.host),
+      via: config.email.brevoApiKey ? 'brevo-api' : config.email.host ? 'smtp' : 'none',
       from: config.email.from,
       ...result,
     })
