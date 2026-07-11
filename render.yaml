@@ -1,0 +1,38 @@
+# Render blueprint for the Bow & Tie API (backend only — the storefront is
+# deployed separately on Vercel). Deploy by pointing Render at this repo, or
+# just create the service manually with the same settings. See DEPLOY.md.
+#
+# Uses a free Neon PostgreSQL database (set DATABASE_URL below in the dashboard).
+services:
+  - type: web
+    name: bow-and-tie-api
+    runtime: node
+    plan: free
+    rootDir: backend
+    # postinstall runs `prisma generate`; deploy:db runs `prisma db push` + seed
+    # (both idempotent, safe to re-run on every deploy).
+    buildCommand: npm install && npm run deploy:db
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Paste your Neon connection string in the dashboard (kept out of git).
+      - key: DATABASE_URL
+        sync: false
+      # Render generates a strong secret once and keeps it stable across deploys.
+      - key: JWT_SECRET
+        generateValue: true
+      # Your Vercel storefront URL, e.g. https://bow-and-tie.vercel.app
+      - key: CORS_ORIGIN
+        sync: false
+      - key: APP_URL
+        sync: false
+      # This service's own URL, e.g. https://bow-and-tie-api.onrender.com
+      - key: PUBLIC_URL
+        sync: false
+      # Strong admin login for the live panel (see DEPLOY.md).
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false

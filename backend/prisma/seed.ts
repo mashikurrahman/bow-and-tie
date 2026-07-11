@@ -28,25 +28,35 @@ async function main() {
     })
   }
 
-  // Demo admin + customer accounts
-  const adminPass = await bcrypt.hash('admin123', 10)
+  // Admin account. On a public server, set ADMIN_EMAIL + ADMIN_PASSWORD so the
+  // admin panel is NOT protected by the well-known demo credentials. When those
+  // env vars are set the password is (re)applied on every seed, so you can
+  // rotate it by changing the env and re-running. In dev they default to the
+  // demo login for convenience.
+  const adminEmail = (process.env.ADMIN_EMAIL ?? 'admin@bowclips.com').toLowerCase()
+  const adminPlain = process.env.ADMIN_PASSWORD ?? 'admin123'
+  const adminPass = await bcrypt.hash(adminPlain, 10)
+  const customAdmin = Boolean(process.env.ADMIN_PASSWORD)
   await prisma.user.upsert({
-    where: { email: 'admin@bowclips.com' },
-    update: {},
-    create: { name: 'Store Admin', email: 'admin@bowclips.com', password: adminPass, role: 'admin' },
+    where: { email: adminEmail },
+    update: customAdmin ? { password: adminPass, role: 'admin' } : {},
+    create: { name: 'Store Admin', email: adminEmail, password: adminPass, role: 'admin' },
   })
 
-  const demoPass = await bcrypt.hash('demo123', 10)
-  await prisma.user.upsert({
-    where: { email: 'demo@bowclips.com' },
-    update: {},
-    create: { name: 'Demo Customer', email: 'demo@bowclips.com', password: demoPass, role: 'customer' },
-  })
+  // Demo customer — only seeded when NOT using custom admin creds (i.e. dev).
+  if (!customAdmin) {
+    const demoPass = await bcrypt.hash('demo123', 10)
+    await prisma.user.upsert({
+      where: { email: 'demo@bowclips.com' },
+      update: {},
+      create: { name: 'Demo Customer', email: 'demo@bowclips.com', password: demoPass, role: 'customer' },
+    })
+  }
 
   const productCount = await prisma.product.count()
-  console.log(`Seed complete: ${productCount} products, ${promoSeed.length} promos, 2 demo users.`)
-  console.log('  Admin login:    admin@bowclips.com / admin123')
-  console.log('  Customer login: demo@bowclips.com  / demo123')
+  console.log(`Seed complete: ${productCount} products, ${promoSeed.length} promos.`)
+  console.log(`  Admin login: ${adminEmail} / ${customAdmin ? '(from ADMIN_PASSWORD)' : 'admin123'}`)
+  if (!customAdmin) console.log('  Customer login: demo@bowclips.com / demo123')
 }
 
 main()

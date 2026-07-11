@@ -8,10 +8,12 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc --noEmit",
     "start": "tsx src/index.ts",
+    "postinstall": "prisma generate",
     "typecheck": "tsc --noEmit",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:push": "prisma db push",
+    "deploy:db": "prisma db push && tsx prisma/seed.ts",
     "seed": "tsx prisma/seed.ts",
     "db:reset": "prisma migrate reset --force"
   },
@@ -32,6 +34,8 @@
     "multer": "^2.2.0",
     "nodemailer": "^9.0.3",
     "pdf-parse": "^2.4.5",
+    "prisma": "^6.2.1",
+    "tsx": "^4.19.2",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
     "zod": "^3.24.1"
   },
@@ -42,8 +46,6 @@
     "@types/jsonwebtoken": "^9.0.7",
     "@types/multer": "^2.2.0",
     "@types/node": "^22.10.5",
-    "prisma": "^6.2.1",
-    "tsx": "^4.19.2",
     "typescript": "^5.7.3"
   }
 }

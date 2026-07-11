@@ -1,24 +1,18 @@
 // ---------------------------------------------------------------------------
 // Prisma schema for the Bow Clips & Hair Accessories store.
 //
-// LOCAL DEV uses SQLite (zero install, runs immediately, used for testing).
-// FOR PRODUCTION with PostgreSQL, change the datasource block to:
+// The store runs on PostgreSQL everywhere (local, staging, production). Set
+// DATABASE_URL in backend/.env to your connection string, e.g. a free Neon DB:
+//   postgresql://user:password@ep-xxx.neon.tech/bowandtie?sslmode=require
+// or the local docker-compose Postgres:
+//   postgresql://postgres:postgres@localhost:5432/bowandtie?schema=public
 //
-//   datasource db {
-//     provider = "postgresql"
-//     url      = env("DATABASE_URL")
-//   }
-//
-// and set DATABASE_URL in .env to your Postgres connection string, e.g.
-//   postgresql://user:password@localhost:5432/bowandtie
-// then run:  npm run prisma:migrate
-//
-// The application code is database-agnostic (it goes through Prisma), so no
-// other change is required. See README for the docker-compose / Neon guides.
+// Then sync the schema and seed:  npm run deploy:db
+// (`prisma db push` + seed). See DEPLOY.md for the full staging guide.
 // ---------------------------------------------------------------------------
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
