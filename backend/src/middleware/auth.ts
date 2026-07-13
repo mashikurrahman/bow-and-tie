@@ -16,7 +16,7 @@ declare global {
 // Admin-panel sections a staff account can be granted access to.
 export const ADMIN_SECTIONS = [
   'dashboard', 'products', 'inventory', 'import', 'orders', 'returns', 'customers',
-  'promotions', 'coupons', 'reports', 'reviews', 'questions', 'settings', 'staff',
+  'promotions', 'coupons', 'marketing', 'reports', 'reviews', 'questions', 'settings', 'staff',
 ] as const
 
 const parsePerms = (s: string): string[] => {
@@ -118,6 +118,8 @@ const PERM_MAP: [RegExp, string][] = [
   [/^\/export\/products/, 'products'],
   [/^\/promotions/, 'promotions'],
   [/^\/coupons/, 'coupons'],
+  [/^\/email-templates/, 'marketing'],
+  [/^\/campaigns/, 'marketing'],
   [/^\/reviews/, 'reviews'],
   [/^\/questions/, 'questions'],
   [/^\/whatsapp/, 'dashboard'],

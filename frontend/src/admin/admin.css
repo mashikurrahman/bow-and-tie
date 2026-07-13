@@ -113,6 +113,22 @@
 .admin-table tr:last-child td { border-bottom: none; }
 .admin-table tr:hover td { background: #fafbfe; }
 
+/* Customer CRM detail */
+.crm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+@media (max-width: 900px) { .crm-grid { grid-template-columns: 1fr; } }
+.crm-row { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--a-border); font-size: 0.85rem; }
+.crm-row span { color: var(--a-muted); }
+.crm-stats { display: flex; gap: 10px; margin-top: 14px; }
+.crm-stats > div { flex: 1; background: #fdf2f6; border-radius: 10px; padding: 12px; text-align: center; }
+.crm-stats strong { display: block; font-size: 1.05rem; color: #a63c60; }
+.crm-stats small { color: var(--a-muted); font-size: 0.72rem; }
+
+/* Email campaigns */
+.campaign-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; align-items: start; }
+@media (max-width: 900px) { .campaign-grid { grid-template-columns: 1fr; } }
+.campaign-tpl { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--a-border); }
+.campaign-tpl:last-child { border-bottom: none; }
+
 /* Bulk order actions */
 .bulk-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 14px; margin-bottom: 10px; background: #fdf2f6; border: 1px solid var(--a-border); border-radius: 10px; font-size: 0.85rem; }
 .admin-table tr.row-selected td { background: #fdf2f6; }
@@ -153,6 +169,8 @@
 .a-btn.danger { background: #fff; color: #d64545; border: 1px solid #f3d0d0; }
 .a-btn.danger:hover { background: #fdeaea; }
 .a-btn.sm { padding: 7px 12px; font-size: 0.76rem; }
+.a-btn.accent { background: #c9527a; }
+.a-btn.accent:hover { background: #a63c60; }
 .a-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 .icon-btn { background: none; border: none; cursor: pointer; color: var(--a-muted); font-size: 0.95rem; padding: 4px 6px; border-radius: 6px; }
 .icon-btn:hover { background: var(--a-bg); color: var(--a-text); }

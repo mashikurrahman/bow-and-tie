@@ -15,6 +15,7 @@ const nav = [
   { to: '/admin/reports', label: 'Reports', icon: '📈', perm: 'reports' },
   { to: '/admin/promotions', label: 'Promotions', icon: '🎯', perm: 'promotions' },
   { to: '/admin/coupons', label: 'Coupons', icon: '🎟️', perm: 'coupons' },
+  { to: '/admin/campaigns', label: 'Campaigns', icon: '📣', perm: 'marketing' },
   { to: '/admin/reviews', label: 'Reviews', icon: '⭐', perm: 'reviews' },
   { to: '/admin/questions', label: 'Q&A', icon: '💬', perm: 'questions' },
 ]

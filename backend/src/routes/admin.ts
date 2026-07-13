@@ -9,7 +9,7 @@ import { serializeOrder, serializeProduct } from '../lib/serialize'
 import { serializePromotion } from '../lib/promotions'
 import { extractRows } from '../lib/importProducts'
 import { sendMailAsync, sendMailResult } from '../lib/mailer'
-import { orderStatusEmail } from '../lib/emails'
+import { orderStatusEmail, campaignEmail } from '../lib/emails'
 import { notifyRestock, cameBackInStock } from '../lib/stockAlerts'
 import { restockOrderItems } from '../lib/inventory'
 import { recomputeProductRating } from '../lib/reviews'
@@ -918,6 +918,67 @@ router.get(
   }),
 )
 
+// ---- Email campaigns (newsletter broadcasts) -----------------------------
+const templateSchema = z.object({
+  name: z.string().min(1).max(120),
+  subject: z.string().min(1).max(200),
+  body: z.string().max(20000).default(''),
+})
+
+router.get(
+  '/email-templates',
+  asyncHandler(async (_req, res) => {
+    const [templates, subscribers] = await Promise.all([
+      prisma.emailTemplate.findMany({ orderBy: { updatedAt: 'desc' } }),
+      prisma.newsletterSubscriber.count(),
+    ])
+    res.json({ templates, subscribers })
+  }),
+)
+
+router.post(
+  '/email-templates',
+  asyncHandler(async (req, res) => {
+    const template = await prisma.emailTemplate.create({ data: templateSchema.parse(req.body) })
+    res.status(201).json({ template })
+  }),
+)
+
+router.put(
+  '/email-templates/:id',
+  asyncHandler(async (req, res) => {
+    const template = await prisma.emailTemplate
+      .update({ where: { id: req.params.id }, data: templateSchema.parse(req.body) })
+      .catch(() => {
+        throw new HttpError(404, 'Template not found')
+      })
+    res.json({ template })
+  }),
+)
+
+router.delete(
+  '/email-templates/:id',
+  asyncHandler(async (req, res) => {
+    await prisma.emailTemplate.delete({ where: { id: req.params.id } }).catch(() => {
+      throw new HttpError(404, 'Template not found')
+    })
+    res.json({ ok: true })
+  }),
+)
+
+// Broadcast a subject + body to every newsletter subscriber (fire-and-forget).
+router.post(
+  '/campaigns/send',
+  asyncHandler(async (req, res) => {
+    const { subject, body } = z
+      .object({ subject: z.string().min(1).max(200), body: z.string().min(1).max(20000) })
+      .parse(req.body)
+    const subs = await prisma.newsletterSubscriber.findMany({ select: { email: true } })
+    for (const s of subs) sendMailAsync(campaignEmail(s.email, subject, body))
+    res.json({ sent: subs.length })
+  }),
+)
+
 // ---- Storefront settings -------------------------------------------------
 // Editable settings shown on the storefront (currently the bKash/Nagad merchant
 // numbers). GET returns current values (with env defaults filled in); PUT saves.
@@ -1076,6 +1137,45 @@ router.get(
         }
       }),
     })
+  }),
+)
+
+// Single customer with full order history + editable private note (CRM view).
+router.get(
+  '/customers/:id',
+  asyncHandler(async (req, res) => {
+    const u = await prisma.user.findUnique({
+      where: { id: req.params.id },
+      include: { addresses: true, orders: { include: { items: true }, orderBy: { createdAt: 'desc' } } },
+    })
+    if (!u || u.role !== 'customer') throw new HttpError(404, 'Customer not found')
+    const paid = u.orders.filter((o) => o.status !== 'Cancelled')
+    res.json({
+      customer: {
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        phone: u.phone ?? u.addresses[0]?.phone ?? '',
+        address: u.addresses[0] ? `${u.addresses[0].address}, ${u.addresses[0].city}` : '',
+        adminNote: u.adminNote,
+        emailVerified: u.emailVerified,
+        orderCount: u.orders.length,
+        totalSpent: paid.reduce((s, o) => s + o.total, 0),
+        createdAt: u.createdAt.toISOString(),
+      },
+      orders: u.orders.map(serializeOrder),
+    })
+  }),
+)
+
+router.put(
+  '/customers/:id/note',
+  asyncHandler(async (req, res) => {
+    const { note } = z.object({ note: z.string().max(2000) }).parse(req.body)
+    await prisma.user.update({ where: { id: req.params.id }, data: { adminNote: note } }).catch(() => {
+      throw new HttpError(404, 'Customer not found')
+    })
+    res.json({ ok: true })
   }),
 )
 

@@ -178,6 +178,14 @@
 .qty-lg button { width: 40px; height: 46px; font-size: 1.3rem; }
 .wish-btn { white-space: nowrap; }
 
+/* Gift option (checkout) */
+.gift-option { margin: 14px 0; padding: 14px; border: 1px dashed var(--border); border-radius: var(--radius-md); background: #fff9fb; }
+.gift-toggle { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 600; color: var(--heading); }
+.gift-message { width: 100%; margin-top: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-md); font-family: inherit; font-size: 0.9rem; resize: vertical; }
+/* Gift note on the packing slip */
+.gift-slip { margin: 10px 0; padding: 8px 12px; border: 1px solid #e3b8c8; border-radius: 8px; background: #fdf2f6; font-size: 0.9rem; }
+.gift-slip-msg { margin-top: 4px; font-style: italic; color: #6b5560; }
+
 /* ===== REVIEWS ===== */
 .reviews { padding: 0 60px 40px; }
 .reviews .section-title { margin-bottom: 24px; }

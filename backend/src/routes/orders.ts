@@ -74,6 +74,8 @@ const createSchema = z.object({
   payment: z.enum(['cod', 'bkash', 'nagad']),
   deliveryZone: z.enum(['inside', 'outside']).optional(),
   txnId: z.string().optional(),
+  giftWrap: z.boolean().optional(),
+  giftMessage: z.string().max(500).optional(),
   notes: z.string().optional(),
   promoCode: z.string().optional(),
 }).refine((v) => v.payment === 'cod' || Boolean(v.txnId?.trim()), {
@@ -220,6 +222,8 @@ router.post(
           deliveryZone: zone,
           payment: input.payment,
           txnId: input.txnId,
+          giftWrap: input.giftWrap ?? false,
+          giftMessage: input.giftMessage,
           notes: input.notes,
           promoCode,
           status: 'Processing',

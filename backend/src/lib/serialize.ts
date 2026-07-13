@@ -102,6 +102,8 @@ export function serializeOrder(o: Order & { items?: OrderItem[] }) {
     payment: o.payment,
     txnId: o.txnId ?? undefined,
     paymentVerified: o.paymentVerified,
+    giftWrap: o.giftWrap,
+    giftMessage: o.giftMessage ?? undefined,
     notes: o.notes ?? undefined,
     promoCode: o.promoCode ?? undefined,
     status: o.status,

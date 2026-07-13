@@ -38,6 +38,22 @@ function layout(heading: string, body: string, preheader = ''): string {
 const button = (href: string, label: string) =>
   `<a href="${href}" style="display:inline-block;background:${ROSE};color:#fff;text-decoration:none;font-weight:600;padding:12px 22px;border-radius:10px;font-size:14px;">${label}</a>`
 
+// A marketing broadcast to newsletter subscribers. The admin-authored body is
+// plain text; blank lines become paragraphs. Wrapped in the branded layout.
+export function campaignEmail(to: string, subject: string, body: string): MailInput {
+  const paragraphs = body
+    .split(/\n{2,}/)
+    .map((p) => `<p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#4a444c;">${p.replace(/\n/g, '<br>')}</p>`)
+    .join('')
+  const cta = button(app, `Shop ${store}`)
+  return {
+    to,
+    subject,
+    html: layout(subject, `${paragraphs}<div style="margin-top:8px;">${cta}</div>`, subject),
+    text: body,
+  }
+}
+
 export interface OrderEmailData {
   id: string
   items: { name: string; quantity: number; price: number }[]

@@ -126,6 +126,9 @@ export default function AdminOrderPrint() {
             <div className="packing-cod">{order.payment === 'cod' ? formatPrice(order.total) : 'Prepaid — collect ৳0'}</div>
           </div>
         </div>
+        {order.giftWrap && (
+          <div className="gift-slip">🎁 <b>Gift order — please gift wrap.</b>{order.giftMessage && <div className="gift-slip-msg">“{order.giftMessage}”</div>}</div>
+        )}
         <table className="invoice-table">
           <thead><tr><th>✓</th><th>Item</th><th>Qty</th></tr></thead>
           <tbody>

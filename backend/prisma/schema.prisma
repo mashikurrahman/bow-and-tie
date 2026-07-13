@@ -29,6 +29,7 @@ model User {
   role          String    @default("customer") // "customer" | "admin" | "staff"
   permissions   String    @default("[]") // JSON array of section keys a staff user may access
   emailVerified Boolean   @default(false) // customer confirmed their email via the link
+  adminNote     String    @default("") // private CRM note the shop keeps on this customer
   addresses     Address[]
   orders        Order[]
   createdAt     DateTime  @default(now())
@@ -166,6 +167,8 @@ model Order {
   payment         String // "cod" | "bkash" | "nagad"
   txnId           String? // customer-entered bKash/Nagad transaction id
   paymentVerified Boolean @default(false) // admin confirmed the txn against their statement
+  giftWrap        Boolean @default(false) // customer asked for gift wrapping
+  giftMessage     String? // optional gift note to include with the order
   notes           String?
   promoCode       String?
   courier         String? // "pathao" | "steadfast" | "redx"
@@ -195,6 +198,17 @@ model OrderItem {
   quantity  Int
   color     String?
   size      String?
+}
+
+// A saved, reusable email campaign (subject + HTML/text body) the admin can
+// broadcast to newsletter subscribers.
+model EmailTemplate {
+  id        String   @id @default(cuid())
+  name      String
+  subject   String
+  body      String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // Simple key/value store for editable storefront settings (e.g. the bKash /

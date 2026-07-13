@@ -110,6 +110,8 @@ export type Customer = {
   createdAt: string
 }
 
+export type CustomerDetail = Customer & { adminNote: string; emailVerified: boolean }
+
 export type AdminReview = {
   id: string
   productId: string
@@ -268,6 +270,8 @@ export const admin = {
   deleteProduct: (id: string) => api.del<{ ok: boolean }>(`/admin/products/${id}`),
 
   listCustomers: () => api.get<{ customers: Customer[] }>('/admin/customers'),
+  getCustomer: (id: string) => api.get<{ customer: CustomerDetail; orders: Order[] }>(`/admin/customers/${id}`),
+  saveCustomerNote: (id: string, note: string) => api.put<{ ok: boolean }>(`/admin/customers/${id}/note`, { note }),
 
   // Staff & permissions
   listStaff: () => api.get<{ staff: Staff[]; sections: string[] }>('/admin/staff'),
@@ -349,9 +353,18 @@ export const admin = {
   // Storefront settings (bKash/Nagad merchant numbers)
   getSettings: () => api.get<StoreSettings>('/admin/settings'),
   updateSettings: (data: Partial<StoreSettings>) => api.put<StoreSettings>('/admin/settings', data),
+
+  // Email campaigns (saved templates + broadcast to newsletter subscribers)
+  listEmailTemplates: () => api.get<{ templates: EmailTemplate[]; subscribers: number }>('/admin/email-templates'),
+  createEmailTemplate: (data: EmailTemplateInput) => api.post<{ template: EmailTemplate }>('/admin/email-templates', data),
+  updateEmailTemplate: (id: string, data: EmailTemplateInput) => api.put<{ template: EmailTemplate }>(`/admin/email-templates/${id}`, data),
+  deleteEmailTemplate: (id: string) => api.del<{ ok: boolean }>(`/admin/email-templates/${id}`),
+  sendCampaign: (subject: string, body: string) => api.post<{ sent: number }>('/admin/campaigns/send', { subject, body }),
 }
 
 export type StoreSettings = { bkashNumber: string; nagadNumber: string }
+export type EmailTemplate = { id: string; name: string; subject: string; body: string; createdAt?: string; updatedAt?: string }
+export type EmailTemplateInput = { name: string; subject: string; body: string }
 
 // Minimal PATCH helper (the shared api client only exposes get/post/put/del).
 async function patch<T>(path: string, body: unknown): Promise<T> {

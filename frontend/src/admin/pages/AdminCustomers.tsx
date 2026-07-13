@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { admin, type Customer } from '../../services/admin'
 import { formatPrice } from '../../store/StoreContext'
 
@@ -37,10 +38,10 @@ export default function AdminCustomers() {
               {filtered.map((c) => (
                 <tr key={c.id}>
                   <td>
-                    <div className="cell-product">
+                    <Link to={`/admin/customers/${c.id}`} className="cell-product admin-link">
                       <span className="admin-avatar sm">{c.name[0]}</span>
                       <div className="cell-strong">{c.name}</div>
-                    </div>
+                    </Link>
                   </td>
                   <td>{c.email}<div className="pid">{c.phone || '—'}</div></td>
                   <td>{c.orderCount}</td>

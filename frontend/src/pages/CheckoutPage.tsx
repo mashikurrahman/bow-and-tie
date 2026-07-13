@@ -38,6 +38,8 @@ export default function CheckoutPage() {
     (firstAddr?.city ?? 'Dhaka').trim().toLowerCase() === 'dhaka' ? 'inside' : 'outside',
   )
   const [txnId, setTxnId] = useState('')
+  const [gift, setGift] = useState(false)
+  const [giftMessage, setGiftMessage] = useState('')
   const [payNumbers, setPayNumbers] = useState({ bkashNumber: '', nagadNumber: '' })
   const [promo, setPromo] = useState('')
   const [discountRate, setDiscountRate] = useState(0)
@@ -129,6 +131,8 @@ export default function CheckoutPage() {
         deliveryZone: zone,
         payment,
         txnId: txnId || undefined,
+        giftWrap: gift,
+        giftMessage: gift ? giftMessage || undefined : undefined,
         notes: form.notes || undefined,
         promoCode: appliedCode || undefined,
       })
@@ -234,6 +238,22 @@ export default function CheckoutPage() {
               </div>
             </div>
           )}
+
+          <div className="gift-option">
+            <label className="gift-toggle">
+              <input type="checkbox" checked={gift} onChange={(e) => setGift(e.target.checked)} />
+              <span>🎁 This is a gift — add a message &amp; gift wrap</span>
+            </label>
+            {gift && (
+              <textarea
+                className="gift-message"
+                value={giftMessage}
+                onChange={(e) => setGiftMessage(e.target.value.slice(0, 500))}
+                placeholder="Your gift message (printed on a card and included with the order)…"
+                rows={3}
+              />
+            )}
+          </div>
         </div>
 
         <aside className="checkout-summary">

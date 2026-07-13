@@ -62,6 +62,8 @@ export type Order = {
   payment: 'cod' | 'bkash' | 'nagad'
   txnId?: string
   paymentVerified?: boolean
+  giftWrap?: boolean
+  giftMessage?: string
   notes?: string
   promoCode?: string
   status: OrderStatus
@@ -164,6 +166,8 @@ export type CreateOrderInput = {
   deliveryZone?: 'inside' | 'outside'
   payment: 'cod' | 'bkash' | 'nagad'
   txnId?: string
+  giftWrap?: boolean
+  giftMessage?: string
   notes?: string
   promoCode?: string
 }
