@@ -1,10 +1,32 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useAuth } from '../../store/AuthContext'
 import { auth as authApi } from '../../services/db'
+import { admin } from '../../services/admin'
 
 export default function AdminSettings() {
   const { user, updateProfile } = useAuth()
-  const [tab, setTab] = useState<'account' | 'security'>('account')
+  const [tab, setTab] = useState<'account' | 'security' | 'payments'>('account')
+
+  const [store, setStore] = useState({ bkashNumber: '', nagadNumber: '' })
+  const [storeMsg, setStoreMsg] = useState('')
+  const [storeBusy, setStoreBusy] = useState(false)
+
+  useEffect(() => {
+    admin.getSettings().then(setStore).catch(() => {})
+  }, [])
+
+  const saveStore = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setStoreBusy(true)
+    try {
+      const saved = await admin.updateSettings(store)
+      setStore(saved)
+      setStoreMsg('Payment numbers saved.')
+      setTimeout(() => setStoreMsg(''), 2500)
+    } finally {
+      setStoreBusy(false)
+    }
+  }
 
   const [profile, setProfile] = useState({ name: user?.name ?? '', phone: user?.phone ?? '' })
   const [profileMsg, setProfileMsg] = useState('')
@@ -48,6 +70,7 @@ export default function AdminSettings() {
       <div className="settings-tabs">
         <button className={tab === 'account' ? 'active' : ''} onClick={() => setTab('account')}>Account</button>
         <button className={tab === 'security' ? 'active' : ''} onClick={() => setTab('security')}>Security</button>
+        <button className={tab === 'payments' ? 'active' : ''} onClick={() => setTab('payments')}>Payments</button>
       </div>
 
       {tab === 'account' ? (
@@ -61,7 +84,7 @@ export default function AdminSettings() {
             <button className="a-btn" type="submit">Update</button>
           </form>
         </div>
-      ) : (
+      ) : tab === 'security' ? (
         <div className="admin-card" style={{ maxWidth: 640 }}>
           <h3 style={{ marginBottom: 16 }}>Password</h3>
           {pwErr && <div className="a-error">{pwErr}</div>}
@@ -78,6 +101,25 @@ export default function AdminSettings() {
               <li>Avoid reusing an old password</li>
             </ul>
             <button className="a-btn" type="submit" disabled={busy}>{busy ? 'Updating…' : 'Update Password'}</button>
+          </form>
+        </div>
+      ) : (
+        <div className="admin-card" style={{ maxWidth: 640 }}>
+          <h3 style={{ marginBottom: 6 }}>Manual payment numbers</h3>
+          <p className="admin-muted" style={{ marginBottom: 16, fontSize: '0.85rem' }}>
+            The bKash / Nagad numbers customers send money to at checkout. Leave a field blank to hide that option&apos;s number.
+          </p>
+          {storeMsg && <div className="a-success">{storeMsg}</div>}
+          <form onSubmit={saveStore}>
+            <div className="a-field">
+              <label>bKash number</label>
+              <input value={store.bkashNumber} onChange={(e) => setStore((s) => ({ ...s, bkashNumber: e.target.value }))} placeholder="01XXXXXXXXX" />
+            </div>
+            <div className="a-field">
+              <label>Nagad number</label>
+              <input value={store.nagadNumber} onChange={(e) => setStore((s) => ({ ...s, nagadNumber: e.target.value }))} placeholder="01XXXXXXXXX" />
+            </div>
+            <button className="a-btn" type="submit" disabled={storeBusy}>{storeBusy ? 'Saving…' : 'Save'}</button>
           </form>
         </div>
       )}

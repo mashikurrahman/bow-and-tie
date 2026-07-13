@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { whatsappNumber } from '../data'
 import {
@@ -12,7 +12,7 @@ import {
 } from '../store/StoreContext'
 import { useProducts } from '../store/ProductsContext'
 import { useAuth } from '../store/AuthContext'
-import { orders as orderApi, type OrderItem } from '../services/db'
+import { orders as orderApi, settings as settingsApi, type OrderItem } from '../services/db'
 import { usePageMeta } from '../hooks/usePageMeta'
 
 type Payment = 'cod' | 'bkash' | 'nagad'
@@ -38,10 +38,15 @@ export default function CheckoutPage() {
     (firstAddr?.city ?? 'Dhaka').trim().toLowerCase() === 'dhaka' ? 'inside' : 'outside',
   )
   const [txnId, setTxnId] = useState('')
+  const [payNumbers, setPayNumbers] = useState({ bkashNumber: '', nagadNumber: '' })
   const [promo, setPromo] = useState('')
   const [discountRate, setDiscountRate] = useState(0)
   const [appliedCode, setAppliedCode] = useState('')
   const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    settingsApi.get().then(setPayNumbers).catch(() => {})
+  }, [])
 
   const shipping = shippingFor(zone, subtotal)
   const discount = Math.round(subtotal * discountRate)
@@ -214,7 +219,15 @@ export default function CheckoutPage() {
           </div>
           {payment !== 'cod' && (
             <div className="pay-note">
-              <p>Send <strong>{formatPrice(total)}</strong> to our {payment === 'bkash' ? 'bKash' : 'Nagad'} merchant number <strong>01XXXXXXXXX</strong>, then enter the Transaction ID below.</p>
+              {(payment === 'bkash' ? payNumbers.bkashNumber : payNumbers.nagadNumber) ? (
+                <p>
+                  Send <strong>{formatPrice(total)}</strong> to our {payment === 'bkash' ? 'bKash' : 'Nagad'} number{' '}
+                  <strong>{payment === 'bkash' ? payNumbers.bkashNumber : payNumbers.nagadNumber}</strong>, then enter the
+                  Transaction ID below.
+                </p>
+              ) : (
+                <p>Send <strong>{formatPrice(total)}</strong> via {payment === 'bkash' ? 'bKash' : 'Nagad'}, then enter the Transaction ID below. (Contact us for the payment number if it isn&apos;t shown.)</p>
+              )}
               <div className="field">
                 <label>Transaction ID *</label>
                 <input required value={txnId} onChange={(e) => setTxnId(e.target.value)} placeholder="e.g. 8N7X6C2K1P" />

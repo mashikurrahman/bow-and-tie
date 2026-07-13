@@ -38,6 +38,16 @@ export default function AdminOrders() {
     load()
   }
 
+  const togglePaymentVerified = async (id: string, verified: boolean) => {
+    // Optimistic update so the toggle feels instant.
+    setOrders((os) => os.map((o) => (o.id === id ? { ...o, paymentVerified: verified } : o)))
+    try {
+      await admin.setPaymentVerified(id, verified)
+    } catch {
+      setOrders((os) => os.map((o) => (o.id === id ? { ...o, paymentVerified: !verified } : o)))
+    }
+  }
+
   return (
     <div>
       <div className="admin-page-head">
@@ -78,7 +88,22 @@ export default function AdminOrders() {
                   <td>{o.customer.name}<div className="pid">{o.customer.phone}</div></td>
                   <td>{o.items.reduce((s, i) => s + i.quantity, 0)}</td>
                   <td className="cell-strong">{formatPrice(o.total)}</td>
-                  <td><StatusPill status={o.payment} label={o.payment.toUpperCase()} /></td>
+                  <td>
+                    <StatusPill status={o.payment} label={o.payment.toUpperCase()} />
+                    {o.payment !== 'cod' && (
+                      <div className="pay-verify">
+                        {o.txnId && <div className="pay-txn" title="Transaction ID">TrxID: {o.txnId}</div>}
+                        <label className={`pay-check ${o.paymentVerified ? 'on' : ''}`}>
+                          <input
+                            type="checkbox"
+                            checked={!!o.paymentVerified}
+                            onChange={(e) => togglePaymentVerified(o.id, e.target.checked)}
+                          />
+                          {o.paymentVerified ? '✓ Verified' : 'Mark verified'}
+                        </label>
+                      </div>
+                    )}
+                  </td>
                   <td className="admin-muted">{new Date(o.createdAt).toLocaleDateString()}</td>
                   <td><StatusPill status={o.status} /></td>
                   <td>

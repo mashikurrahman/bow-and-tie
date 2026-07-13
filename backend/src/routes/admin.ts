@@ -13,6 +13,7 @@ import { orderStatusEmail } from '../lib/emails'
 import { notifyRestock, cameBackInStock } from '../lib/stockAlerts'
 import { restockOrderItems } from '../lib/inventory'
 import { recomputeProductRating } from '../lib/reviews'
+import { getPublicSettings, saveSettings } from '../lib/settings'
 import { sendWhatsAppAsync, restockAlert, buildSalesReport } from '../lib/whatsapp'
 import { createConsignment, COURIERS } from '../lib/courier'
 import type { OrderEmailData } from '../lib/emails'
@@ -260,6 +261,23 @@ router.patch(
         ),
       )
     }
+    res.json({ order: serializeOrder(updated) })
+  }),
+)
+
+// Mark a manual (bKash/Nagad) payment as verified/unverified after the admin
+// has checked the transaction id against their own statement.
+router.patch(
+  '/orders/:id/payment',
+  asyncHandler(async (req, res) => {
+    const { verified } = z.object({ verified: z.boolean() }).parse(req.body)
+    const order = await prisma.order.findUnique({ where: { id: req.params.id } })
+    if (!order) throw new HttpError(404, 'Order not found')
+    const updated = await prisma.order.update({
+      where: { id: order.id },
+      data: { paymentVerified: verified },
+      include: { items: true },
+    })
     res.json({ order: serializeOrder(updated) })
   }),
 )
@@ -806,6 +824,27 @@ router.get(
         lowStock: rows.filter((r) => r.stock > 0 && r.stock <= threshold).length,
       },
     })
+  }),
+)
+
+// ---- Storefront settings -------------------------------------------------
+// Editable settings shown on the storefront (currently the bKash/Nagad merchant
+// numbers). GET returns current values (with env defaults filled in); PUT saves.
+router.get(
+  '/settings',
+  asyncHandler(async (_req, res) => {
+    res.json(await getPublicSettings())
+  }),
+)
+
+router.put(
+  '/settings',
+  asyncHandler(async (req, res) => {
+    const patch = z
+      .object({ bkashNumber: z.string().max(32).optional(), nagadNumber: z.string().max(32).optional() })
+      .parse(req.body)
+    await saveSettings(patch)
+    res.json(await getPublicSettings())
   }),
 )
 

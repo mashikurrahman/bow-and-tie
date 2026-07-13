@@ -101,6 +101,7 @@ export function serializeOrder(o: Order & { items?: OrderItem[] }) {
     trackingCode: o.trackingCode ?? undefined,
     payment: o.payment,
     txnId: o.txnId ?? undefined,
+    paymentVerified: o.paymentVerified,
     notes: o.notes ?? undefined,
     promoCode: o.promoCode ?? undefined,
     status: o.status,

@@ -230,6 +230,9 @@ export const admin = {
   updateOrderStatus: (id: string, status: OrderStatus) =>
     patch<{ order: Order }>(`/admin/orders/${id}/status`, { status }),
 
+  setPaymentVerified: (id: string, verified: boolean) =>
+    patch<{ order: Order }>(`/admin/orders/${id}/payment`, { verified }),
+
   getOrder: (id: string) => api.get<{ order: Order }>(`/admin/orders/${id}`),
   shipOrder: (id: string, provider: 'pathao' | 'steadfast' | 'redx') =>
     api.post<{ order: Order; tracking: { trackingCode: string; mock: boolean } }>(`/admin/orders/${id}/ship`, { provider }),
@@ -318,7 +321,13 @@ export const admin = {
   // Commit the confirmed rows to the store.
   commitImport: (rows: unknown[]) =>
     api.post<ImportResult>('/admin/products/import/commit', { rows }),
+
+  // Storefront settings (bKash/Nagad merchant numbers)
+  getSettings: () => api.get<StoreSettings>('/admin/settings'),
+  updateSettings: (data: Partial<StoreSettings>) => api.put<StoreSettings>('/admin/settings', data),
 }
+
+export type StoreSettings = { bkashNumber: string; nagadNumber: string }
 
 // Minimal PATCH helper (the shared api client only exposes get/post/put/del).
 async function patch<T>(path: string, body: unknown): Promise<T> {

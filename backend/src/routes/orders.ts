@@ -76,6 +76,9 @@ const createSchema = z.object({
   txnId: z.string().optional(),
   notes: z.string().optional(),
   promoCode: z.string().optional(),
+}).refine((v) => v.payment === 'cod' || Boolean(v.txnId?.trim()), {
+  message: 'A transaction ID is required for bKash/Nagad payments.',
+  path: ['txnId'],
 })
 
 // Create an order. Prices, discount and shipping are recomputed server-side

@@ -61,6 +61,7 @@ export type Order = {
   trackingCode?: string
   payment: 'cod' | 'bkash' | 'nagad'
   txnId?: string
+  paymentVerified?: boolean
   notes?: string
   promoCode?: string
   status: OrderStatus
@@ -290,6 +291,20 @@ export const coupons = {
       )
     } catch {
       return null
+    }
+  },
+}
+
+// ----- Storefront settings ------------------------------------------------
+export type PublicSettings = { bkashNumber: string; nagadNumber: string }
+
+export const settings = {
+  /** Public storefront settings (e.g. the bKash/Nagad numbers for checkout). */
+  async get(): Promise<PublicSettings> {
+    try {
+      return await api.get<PublicSettings>('/settings')
+    } catch {
+      return { bkashNumber: '', nagadNumber: '' }
     }
   },
 }

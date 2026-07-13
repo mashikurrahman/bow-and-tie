@@ -37,6 +37,13 @@ export const config = {
     to: process.env.WHATSAPP_ADMIN_TO ?? '', // admin's number in international format, e.g. 8801XXXXXXXXX
     lowStockThreshold: Number(process.env.LOW_STOCK_THRESHOLD ?? 5),
   },
+  // Manual mobile-banking payment numbers shown at checkout (customer sends
+  // money here, then enters the transaction id). These are defaults — the admin
+  // can override them from the settings panel (stored in the Setting table).
+  payment: {
+    bkashNumber: process.env.BKASH_MERCHANT_NUMBER ?? '',
+    nagadNumber: process.env.NAGAD_MERCHANT_NUMBER ?? '',
+  },
   // Object storage for uploaded images (Cloudflare R2 or any S3-compatible
   // bucket). Empty → uploads fall back to the local ./uploads disk (fine in dev,
   // but wiped on every redeploy on ephemeral hosts like Render — set these in

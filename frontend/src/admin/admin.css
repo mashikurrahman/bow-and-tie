@@ -112,6 +112,13 @@
 .admin-table td { padding: 12px 14px; border-bottom: 1px solid var(--a-border); vertical-align: middle; }
 .admin-table tr:last-child td { border-bottom: none; }
 .admin-table tr:hover td { background: #fafbfe; }
+
+/* bKash/Nagad manual-payment verification (Orders table) */
+.pay-verify { margin-top: 6px; display: flex; flex-direction: column; gap: 4px; }
+.pay-txn { font-size: 0.72rem; color: var(--a-muted); font-family: 'Consolas', monospace; }
+.pay-check { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; color: var(--a-muted); cursor: pointer; user-select: none; white-space: nowrap; }
+.pay-check input { cursor: pointer; margin: 0; }
+.pay-check.on { color: #15803d; font-weight: 600; }
 .cell-product { display: flex; align-items: center; gap: 10px; }
 .cell-product img { width: 40px; height: 40px; border-radius: 8px; object-fit: cover; background: var(--a-bg); }
 .cell-product .pid { font-size: 0.7rem; color: var(--a-muted); }

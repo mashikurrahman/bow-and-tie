@@ -164,7 +164,8 @@ model Order {
   customerCity    String
   deliveryZone    String   @default("outside") // "inside" | "outside" (Dhaka)
   payment         String // "cod" | "bkash" | "nagad"
-  txnId           String?
+  txnId           String? // customer-entered bKash/Nagad transaction id
+  paymentVerified Boolean @default(false) // admin confirmed the txn against their statement
   notes           String?
   promoCode       String?
   courier         String? // "pathao" | "steadfast" | "redx"
@@ -194,6 +195,15 @@ model OrderItem {
   quantity  Int
   color     String?
   size      String?
+}
+
+// Simple key/value store for editable storefront settings (e.g. the bKash /
+// Nagad merchant numbers shown at checkout), so they can be changed from the
+// admin panel without a code change or redeploy.
+model Setting {
+  key       String   @id
+  value     String   @default("")
+  updatedAt DateTime @updatedAt
 }
 
 model Promo {
