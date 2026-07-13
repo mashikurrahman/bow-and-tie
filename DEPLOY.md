@@ -158,6 +158,42 @@ need them configured. All values go in **Render → Settings → Environment** (
 5. Redeploy both. The "Continue with Google" button appears automatically, and
    Google users are auto-verified (no email step).
 
+## Persistent image storage (Cloudflare R2)
+
+By default, uploaded product/review images are saved to the server's local disk.
+On Render's free tier that disk is **wiped on every redeploy**, so images vanish.
+Point uploads at **Cloudflare R2** (free: 10 GB storage, no egress/bandwidth
+fees) so they persist. The same setup works for AWS S3 or any S3-compatible
+store. If you leave these env vars empty, the app keeps using the local disk.
+
+1. In the **Cloudflare dashboard → R2**, create a bucket, e.g. `bowandtie-uploads`.
+   (R2 asks for a payment card to activate, but won't charge within the free tier.)
+2. Give the bucket **public access**: bucket → **Settings → Public access** →
+   either enable the **r2.dev** subdomain (quickest) or connect a custom domain
+   like `img.bowandtie.com`. Copy that public base URL.
+3. Create an API token: **R2 → Manage R2 API Tokens → Create** with **Object
+   Read & Write** permission for this bucket. Copy the **Access Key ID** and
+   **Secret Access Key** (shown once).
+4. Find your **Account ID** on the R2 overview page.
+5. Set these env vars on **Render** (and locally in `.env` if you want to test):
+
+   | Key | Value |
+   |-----|-------|
+   | `R2_ACCOUNT_ID` | your Cloudflare account id |
+   | `R2_ACCESS_KEY_ID` | the token's access key id |
+   | `R2_SECRET_ACCESS_KEY` | the token's secret access key |
+   | `R2_BUCKET` | `bowandtie-uploads` |
+   | `R2_PUBLIC_URL` | the public base URL, e.g. `https://pub-xxxx.r2.dev` (no trailing slash) |
+
+6. Redeploy. New uploads now go to R2 and their URLs point at `R2_PUBLIC_URL`.
+   Verify by uploading a product image, then redeploying — the image should
+   still load. *(Images uploaded to the old local disk before this switch are
+   already gone; re-upload them once.)*
+
+> Doing a big product import? Set this up **first**, so the images you attach
+> survive the next deploy. External image URLs typed into the import sheet are
+> stored as-is and aren't affected.
+
 ## Known limits of the free tier (fine for staging)
 
 - **Render sleeps after ~15 min idle.** The first request wakes it (~50 s).
@@ -165,9 +201,9 @@ need them configured. All values go in **Render → Settings → Environment** (
   - Just load the site once to wake it right before you test an integration, or
   - Keep it warm with a free pinger: **cron-job.org** or **UptimeRobot** hitting
     `/api/health` every 10 min during your testing window.
-- **Uploaded images are ephemeral.** Product/review photos saved on Render's
-  free disk are wiped on each redeploy/restart. Re-upload as needed on staging;
-  moving to object storage (Cloudflare R2 / S3) is a production task.
+- **Uploaded images are ephemeral *until you configure R2.*** Photos saved on
+  Render's free disk are wiped on each redeploy. Fix it with the **Persistent
+  image storage (Cloudflare R2)** section above — then uploads survive deploys.
 - **Neon compute autosuspends** after inactivity but resumes in ~1 s on the next
   query — no action needed.
 

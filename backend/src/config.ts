@@ -37,6 +37,21 @@ export const config = {
     to: process.env.WHATSAPP_ADMIN_TO ?? '', // admin's number in international format, e.g. 8801XXXXXXXXX
     lowStockThreshold: Number(process.env.LOW_STOCK_THRESHOLD ?? 5),
   },
+  // Object storage for uploaded images (Cloudflare R2 or any S3-compatible
+  // bucket). Empty → uploads fall back to the local ./uploads disk (fine in dev,
+  // but wiped on every redeploy on ephemeral hosts like Render — set these in
+  // production). endpoint is derived from the R2 account id; accountId can be
+  // left blank and a full S3 endpoint given instead for AWS S3 / other providers.
+  storage: {
+    accountId: process.env.R2_ACCOUNT_ID ?? '',
+    endpoint: process.env.R2_ENDPOINT ?? '',
+    accessKeyId: process.env.R2_ACCESS_KEY_ID ?? '',
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY ?? '',
+    bucket: process.env.R2_BUCKET ?? '',
+    // Public base URL the bucket is served from (the r2.dev dev URL or a custom
+    // domain), used to build image links. No trailing slash.
+    publicUrl: (process.env.R2_PUBLIC_URL ?? '').replace(/\/$/, ''),
+  },
   // Social login. Empty → the corresponding button is hidden / endpoint rejects.
   google: { clientId: process.env.GOOGLE_CLIENT_ID ?? '' },
   facebook: { appId: process.env.FACEBOOK_APP_ID ?? '', appSecret: process.env.FACEBOOK_APP_SECRET ?? '' },
