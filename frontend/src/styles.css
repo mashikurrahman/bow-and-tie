@@ -169,8 +169,13 @@
 .product-option label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--heading); margin-bottom: 10px; }
 .option-chips { display: flex; gap: 10px; flex-wrap: wrap; }
 .product-actions { display: flex; gap: 14px; margin-bottom: 14px; align-items: stretch; }
-.qty-lg button { width: 40px; height: 46px; }
+/* Quantity stepper (used on the cart page and, with .qty-lg, on product pages) */
+.cart-qty { display: inline-flex; align-items: center; gap: 2px; flex-shrink: 0; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 0 4px; background: #fff; }
+.cart-qty button { display: flex; align-items: center; justify-content: center; width: 30px; height: 34px; padding: 0; border: none; background: transparent; color: var(--heading); font-size: 1.15rem; line-height: 1; cursor: pointer; border-radius: 8px; }
+.cart-qty button:hover { background: var(--bg-light); }
+.cart-qty span { min-width: 26px; text-align: center; font-weight: 600; font-size: 0.9rem; color: var(--heading); }
 .qty-lg { border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 0 6px; }
+.qty-lg button { width: 40px; height: 46px; font-size: 1.3rem; }
 .wish-btn { white-space: nowrap; }
 
 /* ===== REVIEWS ===== */
