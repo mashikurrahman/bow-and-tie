@@ -15,6 +15,9 @@ export default function AdminOrders() {
   const [tab, setTab] = useState('All')
   const [q, setQ] = useState('')
   const [loading, setLoading] = useState(true)
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [bulkStatus, setBulkStatus] = useState<OrderStatus>('Confirmed')
+  const [busy, setBusy] = useState(false)
 
   const load = useCallback(() => {
     setLoading(true)
@@ -37,6 +40,37 @@ export default function AdminOrders() {
     await admin.updateOrderStatus(id, status)
     load()
   }
+
+  // Clear the selection whenever the visible list changes (tab/search).
+  useEffect(() => setSelected(new Set()), [tab, q])
+
+  const toggleOne = (id: string) =>
+    setSelected((s) => {
+      const next = new Set(s)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  const allShownSelected = orders.length > 0 && orders.every((o) => selected.has(o.id))
+  const toggleAll = () =>
+    setSelected(allShownSelected ? new Set() : new Set(orders.map((o) => o.id)))
+
+  const applyBulkStatus = async () => {
+    setBusy(true)
+    try {
+      await admin.bulkOrderStatus([...selected], bulkStatus)
+      setSelected(new Set())
+      load()
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const printSlips = () => {
+    if (!selected.size) return
+    window.open(`/admin/print-slips?ids=${[...selected].join(',')}`, '_blank')
+  }
+
+  const exportCsv = () => admin.exportCsv('orders').catch(() => {})
 
   const togglePaymentVerified = async (id: string, verified: boolean) => {
     // Optimistic update so the toggle feels instant.
@@ -63,7 +97,20 @@ export default function AdminOrders() {
             value={q}
             onChange={(e) => setQ(e.target.value)}
           />
+          <button className="a-btn ghost" onClick={exportCsv}>⬇ Export CSV</button>
         </div>
+
+        {selected.size > 0 && (
+          <div className="bulk-bar">
+            <span><b>{selected.size}</b> selected</span>
+            <select className="admin-input" style={{ width: 'auto' }} value={bulkStatus} onChange={(e) => setBulkStatus(e.target.value as OrderStatus)}>
+              {NEXT.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+            <button className="a-btn" onClick={applyBulkStatus} disabled={busy}>{busy ? 'Updating…' : 'Set status'}</button>
+            <button className="a-btn ghost" onClick={printSlips}>🖨 Print slips</button>
+            <button className="a-btn ghost" onClick={() => setSelected(new Set())}>Clear</button>
+          </div>
+        )}
 
         <div className="admin-tabs">
           {TABS.map((t) => (
@@ -77,13 +124,15 @@ export default function AdminOrders() {
           <table className="admin-table">
             <thead>
               <tr>
+                <th style={{ width: 32 }}><input type="checkbox" checked={allShownSelected} onChange={toggleAll} aria-label="Select all" /></th>
                 <th>Order</th><th>Customer</th><th>Items</th><th>Total</th>
                 <th>Payment</th><th>Date</th><th>Status</th><th>Update</th>
               </tr>
             </thead>
             <tbody>
               {orders.map((o) => (
-                <tr key={o.id}>
+                <tr key={o.id} className={selected.has(o.id) ? 'row-selected' : ''}>
+                  <td><input type="checkbox" checked={selected.has(o.id)} onChange={() => toggleOne(o.id)} aria-label={`Select order ${o.id}`} /></td>
                   <td className="cell-strong"><Link to={`/admin/orders/${o.id}`} className="admin-link">#{o.id}</Link></td>
                   <td>{o.customer.name}<div className="pid">{o.customer.phone}</div></td>
                   <td>{o.items.reduce((s, i) => s + i.quantity, 0)}</td>

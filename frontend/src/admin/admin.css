@@ -113,6 +113,18 @@
 .admin-table tr:last-child td { border-bottom: none; }
 .admin-table tr:hover td { background: #fafbfe; }
 
+/* Bulk order actions */
+.bulk-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 14px; margin-bottom: 10px; background: #fdf2f6; border: 1px solid var(--a-border); border-radius: 10px; font-size: 0.85rem; }
+.admin-table tr.row-selected td { background: #fdf2f6; }
+/* One packing slip per printed page */
+.print-page-break { page-break-after: always; }
+.print-page-break:last-child { page-break-after: auto; }
+
+/* New-order badges */
+.admin-nav-badge { margin-left: auto; background: var(--accent, #c9527a); color: #fff; font-size: 0.68rem; font-weight: 700; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; display: inline-flex; align-items: center; justify-content: center; }
+.admin-bell { position: relative; }
+.admin-bell-dot { position: absolute; top: -2px; right: -2px; width: 8px; height: 8px; background: #e0245e; border-radius: 50%; border: 1.5px solid #fff; }
+
 /* bKash/Nagad manual-payment verification (Orders table) */
 .pay-verify { margin-top: 6px; display: flex; flex-direction: column; gap: 4px; }
 .pay-txn { font-size: 0.72rem; color: var(--a-muted); font-family: 'Consolas', monospace; }

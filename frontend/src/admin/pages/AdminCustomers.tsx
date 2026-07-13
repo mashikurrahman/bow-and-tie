@@ -25,6 +25,7 @@ export default function AdminCustomers() {
       <div className="admin-card">
         <div className="admin-toolbar">
           <input className="admin-input grow" placeholder="Search by name or email…" value={q} onChange={(e) => setQ(e.target.value)} />
+          <button className="a-btn ghost" onClick={() => admin.exportCsv('customers').catch(() => {})}>⬇ Export CSV</button>
         </div>
 
         <div className="admin-table-wrap">

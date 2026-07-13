@@ -14,6 +14,7 @@ import { notifyRestock, cameBackInStock } from '../lib/stockAlerts'
 import { restockOrderItems } from '../lib/inventory'
 import { recomputeProductRating } from '../lib/reviews'
 import { getPublicSettings, saveSettings } from '../lib/settings'
+import { toCsv, sendCsv } from '../lib/csv'
 import { sendWhatsAppAsync, restockAlert, buildSalesReport } from '../lib/whatsapp'
 import { createConsignment, COURIERS } from '../lib/courier'
 import type { OrderEmailData } from '../lib/emails'
@@ -161,6 +162,16 @@ router.get(
   }),
 )
 
+// Lightweight count of orders still needing attention (drives the admin badge).
+// Declared before /orders/:id so "pending-count" isn't captured as an id.
+router.get(
+  '/orders/pending-count',
+  asyncHandler(async (_req, res) => {
+    const count = await prisma.order.count({ where: { status: 'Processing' } })
+    res.json({ count })
+  }),
+)
+
 // Single order (for the printable invoice / packing slip view).
 router.get(
   '/orders/:id',
@@ -262,6 +273,34 @@ router.patch(
       )
     }
     res.json({ order: serializeOrder(updated) })
+  }),
+)
+
+// Bulk status update for several orders at once (from the Orders table).
+router.patch(
+  '/orders/bulk-status',
+  asyncHandler(async (req, res) => {
+    const { ids, status } = z
+      .object({ ids: z.array(z.string()).min(1), status: statusSchema.shape.status })
+      .parse(req.body)
+    const at = new Date().toISOString()
+    const orders = await prisma.order.findMany({ where: { id: { in: ids } } })
+    await prisma.$transaction(
+      orders.map((o) => {
+        let timeline: { status: string; at: string }[] = []
+        try {
+          timeline = JSON.parse(o.timeline)
+        } catch {
+          timeline = []
+        }
+        timeline.push({ status, at })
+        return prisma.order.update({
+          where: { id: o.id },
+          data: { status, timeline: JSON.stringify(timeline) },
+        })
+      }),
+    )
+    res.json({ updated: orders.length })
   }),
 )
 
@@ -824,6 +863,58 @@ router.get(
         lowStock: rows.filter((r) => r.stock > 0 && r.stock <= threshold).length,
       },
     })
+  }),
+)
+
+// ---- CSV data export -----------------------------------------------------
+router.get(
+  '/export/orders',
+  asyncHandler(async (_req, res) => {
+    const orders = await prisma.order.findMany({ include: { items: true }, orderBy: { createdAt: 'desc' } })
+    const headers = ['Order ID', 'Date', 'Customer', 'Phone', 'Address', 'City', 'Items', 'Subtotal', 'Discount', 'Shipping', 'Total', 'Payment', 'Txn ID', 'Payment Verified', 'Status', 'Courier', 'Tracking']
+    const rows = orders.map((o) => [
+      o.id,
+      o.createdAt.toISOString().slice(0, 10),
+      o.customerName,
+      o.customerPhone,
+      o.customerAddress,
+      o.customerCity,
+      o.items.reduce((s, i) => s + i.quantity, 0),
+      o.subtotal,
+      o.discount,
+      o.shipping,
+      o.total,
+      o.payment,
+      o.txnId ?? '',
+      o.paymentVerified ? 'yes' : 'no',
+      o.status,
+      o.courier ?? '',
+      o.trackingCode ?? '',
+    ])
+    sendCsv(res, 'orders.csv', toCsv(headers, rows))
+  }),
+)
+
+router.get(
+  '/export/products',
+  asyncHandler(async (_req, res) => {
+    const products = await prisma.product.findMany({ orderBy: { name: 'asc' } })
+    const headers = ['ID', 'Name', 'Category', 'Price', 'Original Price', 'Cost Price', 'Stock', 'In Stock', 'Featured', 'Badge']
+    const rows = products.map((p) => [p.id, p.name, p.category, p.price, p.originalPrice, p.costPrice, p.stock, p.inStock ? 'yes' : 'no', p.featured ? 'yes' : 'no', p.badge])
+    sendCsv(res, 'products.csv', toCsv(headers, rows))
+  }),
+)
+
+router.get(
+  '/export/customers',
+  asyncHandler(async (_req, res) => {
+    const users = await prisma.user.findMany({ where: { role: 'customer' }, include: { addresses: true, orders: true }, orderBy: { createdAt: 'desc' } })
+    const headers = ['Name', 'Email', 'Phone', 'City', 'Orders', 'Total Spent', 'Joined']
+    const rows = users.map((u) => {
+      const paid = u.orders.filter((o) => o.status !== 'Cancelled')
+      return [u.name, u.email, u.phone ?? u.addresses[0]?.phone ?? '', u.addresses[0]?.city ?? '', u.orders.length, paid.reduce((s, o) => s + o.total, 0), u.createdAt.toISOString().slice(0, 10)]
+    })
+    sendCsv(res, 'customers.csv', toCsv(headers, rows))
   }),
 )
 

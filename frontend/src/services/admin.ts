@@ -233,6 +233,30 @@ export const admin = {
   setPaymentVerified: (id: string, verified: boolean) =>
     patch<{ order: Order }>(`/admin/orders/${id}/payment`, { verified }),
 
+  // Count of orders still in "Processing" — polled for the sidebar badge.
+  pendingOrderCount: () => api.get<{ count: number }>('/admin/orders/pending-count'),
+
+  // Bulk status change for the selected orders.
+  bulkOrderStatus: (ids: string[], status: OrderStatus) =>
+    patch<{ updated: number }>('/admin/orders/bulk-status', { ids, status }),
+
+  // CSV exports (download a Blob). kind: 'orders' | 'customers' | 'products'.
+  async exportCsv(kind: 'orders' | 'customers' | 'products'): Promise<void> {
+    const res = await fetch(`${BASE}/admin/export/${kind}`, {
+      headers: { Authorization: `Bearer ${getToken()}` },
+    })
+    if (!res.ok) throw new Error('Export failed')
+    const blob = await res.blob()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `bowandtie-${kind}-${new Date().toISOString().slice(0, 10)}.csv`
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(url)
+  },
+
   getOrder: (id: string) => api.get<{ order: Order }>(`/admin/orders/${id}`),
   shipOrder: (id: string, provider: 'pathao' | 'steadfast' | 'redx') =>
     api.post<{ order: Order; tracking: { trackingCode: string; mock: boolean } }>(`/admin/orders/${id}/ship`, { provider }),

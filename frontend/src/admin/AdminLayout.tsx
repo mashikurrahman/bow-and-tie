@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../store/AuthContext'
+import { admin } from '../services/admin'
 import './admin.css'
 
 const nav = [
@@ -27,6 +28,25 @@ export default function AdminLayout() {
   const isAdmin = user?.role === 'admin'
   const can = (p: string) => isAdmin || perms.includes(p)
   const visibleNav = nav.filter((n) => can(n.perm))
+
+  // New-order badge: count of orders still in "Processing", refreshed periodically.
+  const [pending, setPending] = useState(0)
+  useEffect(() => {
+    if (!can('orders')) return
+    let alive = true
+    const tick = () =>
+      admin
+        .pendingOrderCount()
+        .then((r) => alive && setPending(r.count))
+        .catch(() => {})
+    tick()
+    const t = setInterval(tick, 30000)
+    return () => {
+      alive = false
+      clearInterval(t)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const doLogout = () => {
     logout()
@@ -61,6 +81,7 @@ export default function AdminLayout() {
             >
               <span className="admin-nav-icon">{n.icon}</span>
               {n.label}
+              {n.perm === 'orders' && pending > 0 && <span className="admin-nav-badge">{pending}</span>}
             </NavLink>
           ))}
           <span className="admin-nav-section">Tools</span>
@@ -108,7 +129,9 @@ export default function AdminLayout() {
             <input placeholder="Search…" />
           </div>
           <div className="admin-topbar-right">
-            <span className="admin-bell">🔔</span>
+            <span className="admin-bell" title={pending > 0 ? `${pending} new order${pending > 1 ? 's' : ''}` : 'No new orders'}>
+              🔔{pending > 0 && <span className="admin-bell-dot" />}
+            </span>
             <div className="admin-topuser">
               <span className="admin-avatar sm">{user?.name?.[0] ?? 'A'}</span>
               <div>

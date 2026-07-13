@@ -76,8 +76,18 @@ export default function CartPage() {
           <h3>Order Summary</h3>
           <div className="cart-total-row"><span>Subtotal</span><span>{formatPrice(subtotal)}</span></div>
           <div className="cart-total-row"><span>Shipping</span><span>{shipping === 0 ? 'Free' : formatPrice(shipping)}</span></div>
-          {shipping > 0 && (
-            <p className="ship-hint">Add {formatPrice(FREE_SHIPPING_THRESHOLD - subtotal)} more for free delivery.</p>
+          {subtotal > 0 && subtotal <= FREE_SHIPPING_THRESHOLD && (
+            <div className="ship-nudge">
+              <div className="ship-nudge-text">
+                Add <b>{formatPrice(FREE_SHIPPING_THRESHOLD - subtotal + 1)}</b> more for <b>FREE delivery</b> 🚚
+              </div>
+              <div className="ship-nudge-bar">
+                <span style={{ width: `${Math.min(100, (subtotal / FREE_SHIPPING_THRESHOLD) * 100)}%` }} />
+              </div>
+            </div>
+          )}
+          {subtotal > FREE_SHIPPING_THRESHOLD && (
+            <div className="ship-nudge unlocked">🎉 You&apos;ve unlocked <b>FREE delivery!</b></div>
           )}
           <div className="cart-total-row grand"><span>Total</span><span>{formatPrice(total)}</span></div>
           <Link to="/checkout" className="btn btn-full">Proceed to Checkout</Link>
