@@ -42,7 +42,11 @@ export default function HomePage() {
       return flag(b) - flag(a) || b.reviews - a.reviews
     })
     .slice(0, 6)
-  const newArrivals = products.slice(0, 8)
+  // Newest first — sort by creation time (falls back to existing order for the
+  // bundled data, which has no createdAt).
+  const newArrivals = [...products]
+    .sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''))
+    .slice(0, 8)
 
   const scrollBestsellers = (direction: number) => {
     const el = scrollRef.current

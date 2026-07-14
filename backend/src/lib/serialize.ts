@@ -49,6 +49,7 @@ export function serializeProduct(p: Product & { reviews?: Review[]; variants?: P
     inStock,
     featured: p.featured,
     stock,
+    createdAt: p.createdAt.toISOString(),
     variants,
     reviewList: (p.reviews ?? [])
       .filter((r) => !r.hidden)

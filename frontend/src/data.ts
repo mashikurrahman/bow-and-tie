@@ -40,6 +40,7 @@ export type Product = {
   gallery?: string[]
   reviewList?: Review[]
   stock?: number
+  createdAt?: string
   variants?: Variant[]
   sale?: { price: number; percent: number; title: string; promotionId: string } | null
 }
