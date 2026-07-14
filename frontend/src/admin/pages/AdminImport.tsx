@@ -103,10 +103,16 @@ export default function AdminImport() {
         </ol>
         <div className="import-howto-actions">
           <button className="a-btn" onClick={downloadTemplate}>⬇ Download CSV template</button>
+          <Link to="/admin/bulk-images" className="a-btn ghost">🖼 Bulk Images</Link>
           <span className="import-hint">
             Required: <b>name</b>, <b>category</b>, <b>price</b>. Products matched by name are <b>updated</b>;
             new names are <b>created</b>. New categories are added automatically.
           </span>
+        </div>
+        <div className="import-note">
+          <b>Images:</b> the sheet only stores image <i>links</i>. To add photo files, import the
+          products first, then use <Link to="/admin/bulk-images" className="admin-link">Bulk Images</Link> —
+          name each photo after the product's slug (e.g. <code>satin-cloud-bow.jpg</code>) and upload them all at once.
         </div>
         <div className="import-note">
           <b>PDF tip:</b> works best when the PDF contains a clean table with a header row

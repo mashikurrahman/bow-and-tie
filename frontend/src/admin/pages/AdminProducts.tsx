@@ -35,6 +35,7 @@ export default function AdminProducts() {
         <div className="admin-toolbar">
           <input className="admin-input grow" placeholder="Search products…" value={q} onChange={(e) => setQ(e.target.value)} />
           <Link to="/admin/import" className="a-btn ghost">📦 Bulk Import</Link>
+          <Link to="/admin/bulk-images" className="a-btn ghost">🖼 Bulk Images</Link>
           <button className="a-btn ghost" onClick={() => admin.exportCsv('products').catch(() => {})}>⬇ Export CSV</button>
           <Link to="/admin/products/new" className="a-btn">＋ Add Product</Link>
         </div>

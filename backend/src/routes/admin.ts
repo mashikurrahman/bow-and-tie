@@ -15,6 +15,7 @@ import { restockOrderItems } from '../lib/inventory'
 import { recomputeProductRating } from '../lib/reviews'
 import { getPublicSettings, saveSettings } from '../lib/settings'
 import { toCsv, sendCsv } from '../lib/csv'
+import { saveImage } from '../lib/storage'
 import { sendWhatsAppAsync, restockAlert, buildSalesReport } from '../lib/whatsapp'
 import { createConsignment, COURIERS } from '../lib/courier'
 import type { OrderEmailData } from '../lib/emails'
@@ -27,6 +28,14 @@ router.use(requireAuth, requireStaff, checkPermission)
 const importUpload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+})
+
+// In-memory upload for bulk product images (matched to products by filename,
+// then stored via the image storage layer).
+const bulkImageUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024, files: 100 }, // 5MB each, up to 100
+  fileFilter: (_req, file, cb) => cb(null, /\.(png|jpe?g|webp|gif)$/i.test(file.originalname)),
 })
 
 // Parse a JSON-string array column, tolerating bad data.
@@ -705,6 +714,70 @@ router.post(
     }
 
     res.json({ created, updated, failed })
+  }),
+)
+
+// Bulk product images: match uploaded files to products by filename (the file
+// name, minus extension, must equal the product's slug/id; a "-2", "-3" suffix
+// adds gallery images). Stores each via the image storage layer (R2 in prod).
+router.post(
+  '/products/bulk-images',
+  bulkImageUpload.array('images'),
+  asyncHandler(async (req, res) => {
+    const files = (req.files as Express.Multer.File[] | undefined) ?? []
+    if (!files.length) throw new HttpError(400, 'No images uploaded (png/jpg/webp/gif, max 5MB each)')
+
+    const products = await prisma.product.findMany({ select: { id: true, image: true, gallery: true } })
+    const byId = new Map(products.map((p) => [p.id.toLowerCase(), p]))
+
+    type Pending = { primary?: string; extras: { order: number; url: string }[] }
+    const pending = new Map<string, Pending>()
+    const matched: { file: string; product: string; kind: 'primary' | 'gallery' }[] = []
+    const unmatched: string[] = []
+
+    for (const file of files) {
+      const base = file.originalname.replace(/\.[^.]+$/, '').trim().toLowerCase()
+      let productId: string | undefined
+      let order = 0
+      if (byId.has(base)) {
+        productId = byId.get(base)!.id
+      } else {
+        const m = base.match(/^(.*)-(\d+)$/)
+        if (m && byId.has(m[1])) {
+          productId = byId.get(m[1])!.id
+          order = Number(m[2])
+        }
+      }
+      if (!productId) {
+        unmatched.push(file.originalname)
+        continue
+      }
+      const url = await saveImage(file.buffer, file.originalname, file.mimetype)
+      const p = pending.get(productId) ?? { extras: [] }
+      if (order === 0) {
+        p.primary = url
+        matched.push({ file: file.originalname, product: productId, kind: 'primary' })
+      } else {
+        p.extras.push({ order, url })
+        matched.push({ file: file.originalname, product: productId, kind: 'gallery' })
+      }
+      pending.set(productId, p)
+    }
+
+    let updated = 0
+    for (const [id, chg] of pending) {
+      const prod = byId.get(id.toLowerCase())!
+      const existingGallery = parseJsonArr(prod.gallery)
+      const extras = chg.extras.sort((a, b) => a.order - b.order).map((e) => e.url)
+      const image = chg.primary || prod.image
+      const gallery = Array.from(
+        new Set([...(chg.primary ? [chg.primary] : []), ...existingGallery, ...extras]),
+      ).filter(Boolean)
+      await prisma.product.update({ where: { id }, data: { image, gallery: JSON.stringify(gallery) } })
+      updated++
+    }
+
+    res.json({ updated, matched, unmatched })
   }),
 )
 

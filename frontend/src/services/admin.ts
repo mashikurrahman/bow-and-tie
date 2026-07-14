@@ -350,6 +350,20 @@ export const admin = {
   commitImport: (rows: unknown[]) =>
     api.post<ImportResult>('/admin/products/import/commit', { rows }),
 
+  // Bulk product images: upload many files, matched to products by filename.
+  async bulkUploadImages(files: File[]): Promise<BulkImageResult> {
+    const form = new FormData()
+    for (const f of files) form.append('images', f)
+    const res = await fetch(`${BASE}/admin/products/bulk-images`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${getToken()}` },
+      body: form,
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) throw new Error((data as { error?: string }).error || 'Upload failed')
+    return data as BulkImageResult
+  },
+
   // Storefront settings (bKash/Nagad merchant numbers)
   getSettings: () => api.get<StoreSettings>('/admin/settings'),
   updateSettings: (data: Partial<StoreSettings>) => api.put<StoreSettings>('/admin/settings', data),
@@ -362,6 +376,11 @@ export const admin = {
   sendCampaign: (subject: string, body: string) => api.post<{ sent: number }>('/admin/campaigns/send', { subject, body }),
 }
 
+export type BulkImageResult = {
+  updated: number
+  matched: { file: string; product: string; kind: 'primary' | 'gallery' }[]
+  unmatched: string[]
+}
 export type StoreSettings = { bkashNumber: string; nagadNumber: string }
 export type EmailTemplate = { id: string; name: string; subject: string; body: string; createdAt?: string; updatedAt?: string }
 export type EmailTemplateInput = { name: string; subject: string; body: string }

@@ -43,6 +43,7 @@ const AdminOrderPrint = lazy(() => import('./admin/pages/AdminOrderPrint'))
 const AdminBulkPrint = lazy(() => import('./admin/pages/AdminBulkPrint'))
 const AdminCampaigns = lazy(() => import('./admin/pages/AdminCampaigns'))
 const AdminCustomerDetail = lazy(() => import('./admin/pages/AdminCustomerDetail'))
+const AdminBulkImages = lazy(() => import('./admin/pages/AdminBulkImages'))
 const AdminPromotions = lazy(() => import('./admin/pages/AdminPromotions'))
 const AdminCoupons = lazy(() => import('./admin/pages/AdminCoupons'))
 const AdminSettings = lazy(() => import('./admin/pages/AdminSettings'))
@@ -101,6 +102,7 @@ export default function App() {
         <Route path="products/new" element={<AdminProductForm />} />
         <Route path="products/:id/edit" element={<AdminProductForm />} />
         <Route path="import" element={<AdminImport />} />
+        <Route path="bulk-images" element={<AdminBulkImages />} />
         <Route path="customers" element={<AdminCustomers />} />
         <Route path="customers/:id" element={<AdminCustomerDetail />} />
         <Route path="reports" element={<AdminReports />} />

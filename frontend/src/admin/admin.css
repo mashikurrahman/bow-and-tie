@@ -113,6 +113,15 @@
 .admin-table tr:last-child td { border-bottom: none; }
 .admin-table tr:hover td { background: #fafbfe; }
 
+/* Bulk product images */
+.bulk-img-help { background: #fdf2f6; border-radius: 10px; padding: 14px 16px; margin-bottom: 16px; font-size: 0.85rem; }
+.bulk-img-help ul { margin: 8px 0 0; padding-left: 20px; }
+.bulk-img-help li { margin: 3px 0; }
+.bulk-img-help code { background: #fff; padding: 1px 6px; border-radius: 4px; border: 1px solid var(--a-border); font-size: 0.82rem; }
+.bulk-img-drop { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 24px; border: 2px dashed #d9a7bb; border-radius: 12px; background: #fff9fb; color: #a63c60; font-weight: 600; cursor: pointer; }
+.bulk-img-drop:hover { background: #fdf2f6; }
+.bulk-nomatch { color: #d64545; font-size: 0.82rem; }
+
 /* Customer CRM detail */
 .crm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
 @media (max-width: 900px) { .crm-grid { grid-template-columns: 1fr; } }
