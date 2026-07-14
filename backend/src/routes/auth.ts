@@ -13,6 +13,7 @@ import {
 } from '../lib/auth'
 import { requireAuth } from '../middleware/auth'
 import { serializeUser } from '../lib/user'
+import { generateReferralCode } from '../lib/loyalty'
 import { sendMailAsync } from '../lib/mailer'
 import { welcomeEmail, passwordResetEmail, verificationEmail } from '../lib/emails'
 import { verifySocial } from '../lib/oauth'
@@ -29,6 +30,7 @@ const registerSchema = z.object({
   name: z.string().min(1),
   email: z.string().email(),
   password: z.string().min(4),
+  referralCode: z.string().optional(), // a friend's code, if they were referred
 })
 
 const loginSchema = z.object({
@@ -39,12 +41,25 @@ const loginSchema = z.object({
 router.post(
   '/register',
   asyncHandler(async (req, res) => {
-    const { name, email, password } = registerSchema.parse(req.body)
+    const { name, email, password, referralCode } = registerSchema.parse(req.body)
     const existing = await prisma.user.findUnique({ where: { email: email.toLowerCase() } })
     if (existing) throw new HttpError(409, 'An account with this email already exists.')
 
+    // Honour a referral code only if it belongs to a real, different account.
+    let referredBy: string | undefined
+    if (referralCode?.trim()) {
+      const referrer = await prisma.user.findUnique({ where: { referralCode: referralCode.trim().toUpperCase() }, select: { referralCode: true } })
+      if (referrer) referredBy = referrer.referralCode ?? undefined
+    }
+
     const user = await prisma.user.create({
-      data: { name, email: email.toLowerCase(), password: await hashPassword(password) },
+      data: {
+        name,
+        email: email.toLowerCase(),
+        password: await hashPassword(password),
+        referralCode: await generateReferralCode(),
+        referredBy,
+      },
       include: { addresses: true },
     })
     // Soft verification: the customer is signed in right away, but we email a
@@ -180,6 +195,11 @@ router.get(
       include: { addresses: true },
     })
     if (!user) throw new HttpError(404, 'User not found')
+    // Back-fill a referral code for accounts created before loyalty existed.
+    if (!user.referralCode && user.role === 'customer') {
+      user.referralCode = await generateReferralCode()
+      await prisma.user.update({ where: { id: user.id }, data: { referralCode: user.referralCode } })
+    }
     res.json({ user: serializeUser(user) })
   }),
 )

@@ -40,6 +40,8 @@ export default function CheckoutPage() {
   const [txnId, setTxnId] = useState('')
   const [gift, setGift] = useState(false)
   const [giftMessage, setGiftMessage] = useState('')
+  const [usePoints, setUsePoints] = useState(false)
+  const [redeemInput, setRedeemInput] = useState(0)
   const [payNumbers, setPayNumbers] = useState({ bkashNumber: '', nagadNumber: '' })
   const [promo, setPromo] = useState('')
   const [discountRate, setDiscountRate] = useState(0)
@@ -52,7 +54,12 @@ export default function CheckoutPage() {
 
   const shipping = shippingFor(zone, subtotal)
   const discount = Math.round(subtotal * discountRate)
-  const total = subtotal - discount + shipping
+  // Loyalty: how many points the customer may spend (capped at balance and the
+  // after-discount value). Server re-validates and recomputes authoritatively.
+  const pointsBalance = user?.points ?? 0
+  const maxRedeem = Math.max(0, Math.min(pointsBalance, subtotal - discount))
+  const pointsUsed = usePoints ? Math.min(maxRedeem, redeemInput || maxRedeem) : 0
+  const total = subtotal - discount - pointsUsed + shipping
 
   if (cart.length === 0) {
     return (
@@ -133,6 +140,7 @@ export default function CheckoutPage() {
         txnId: txnId || undefined,
         giftWrap: gift,
         giftMessage: gift ? giftMessage || undefined : undefined,
+        redeemPoints: pointsUsed || undefined,
         notes: form.notes || undefined,
         promoCode: appliedCode || undefined,
       })
@@ -281,10 +289,19 @@ export default function CheckoutPage() {
             <button type="button" className="btn btn-sm" onClick={checkPromo}>Apply</button>
           </div>
 
+          {maxRedeem > 0 && (
+            <label className="points-redeem">
+              <input type="checkbox" checked={usePoints} onChange={(e) => { setUsePoints(e.target.checked); setRedeemInput(maxRedeem) }} />
+              <span>Use my points — <b>{pointsBalance}</b> available (up to −{formatPrice(maxRedeem)})</span>
+            </label>
+          )}
+
           <div className="cart-total-row"><span>Subtotal</span><span>{formatPrice(subtotal)}</span></div>
           {discount > 0 && <div className="cart-total-row discount"><span>Discount</span><span>-{formatPrice(discount)}</span></div>}
+          {pointsUsed > 0 && <div className="cart-total-row discount"><span>Points ({pointsUsed})</span><span>-{formatPrice(pointsUsed)}</span></div>}
           <div className="cart-total-row"><span>Shipping · {SHIPPING_ZONES[zone].eta}</span><span>{shipping === 0 ? 'Free' : formatPrice(shipping)}</span></div>
           <div className="cart-total-row grand"><span>Total</span><span>{formatPrice(total)}</span></div>
+          {pointsBalance > 0 && !usePoints && <p className="points-earn-hint">You'll earn points on this order 🎀</p>}
 
           <button type="submit" className="btn btn-full" disabled={busy}>{busy ? 'Placing order…' : 'Place Order'}</button>
           <button type="button" className="btn btn-outline btn-full wa-btn" onClick={orderWhatsApp}>

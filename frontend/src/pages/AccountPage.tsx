@@ -14,8 +14,17 @@ export default function AccountPage() {
   const [profile, setProfile] = useState({ name: user?.name ?? '', phone: user?.phone ?? '' })
   const [addr, setAddr] = useState<Address>(emptyAddr)
   const [showAddr, setShowAddr] = useState(false)
+  const [copied, setCopied] = useState(false)
 
   if (!user) return null
+
+  const referralLink = user.referralCode ? `${window.location.origin}/login?ref=${user.referralCode}` : ''
+  const copyRef = () => {
+    navigator.clipboard?.writeText(referralLink).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
 
   const saveProfile = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -53,6 +62,24 @@ export default function AccountPage() {
         <Link to="/track" className="account-tile"><span>🚚</span><strong>Track Order</strong><small>By order number</small></Link>
         <Link to="/shop" className="account-tile"><span>🛍️</span><strong>Continue Shopping</strong><small>Browse products</small></Link>
       </div>
+
+      {user.referralCode && (
+        <section className="rewards-banner">
+          <div className="rewards-points">
+            <span className="rewards-num">{user.points ?? 0}</span>
+            <small>points</small>
+            <em>= ৳{user.points ?? 0} to spend</em>
+          </div>
+          <div className="rewards-ref">
+            <strong>🎁 Refer a friend — you both get ৳100</strong>
+            <p>Share your link. When your friend places their first order, you each earn 100 points. You also earn points on every order you place.</p>
+            <div className="rewards-code">
+              <code>{user.referralCode}</code>
+              <button className="btn btn-sm" onClick={copyRef}>{copied ? '✓ Copied!' : 'Copy invite link'}</button>
+            </div>
+          </div>
+        </section>
+      )}
 
       <div className="account-grid">
         <section className="account-card">

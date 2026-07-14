@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../store/AuthContext'
 import { useStore } from '../store/StoreContext'
 import SocialLogin from '../components/SocialLogin'
@@ -13,8 +13,10 @@ export default function LoginPage() {
   const location = useLocation() as { state?: { from?: string } }
   const redirectTo = location.state?.from ?? '/account'
 
-  const [mode, setMode] = useState<'login' | 'register'>('login')
-  const [form, setForm] = useState({ name: '', email: '', password: '' })
+  const [searchParams] = useSearchParams()
+  const refCode = searchParams.get('ref') ?? ''
+  const [mode, setMode] = useState<'login' | 'register'>(refCode ? 'register' : 'login')
+  const [form, setForm] = useState({ name: '', email: '', password: '', referralCode: refCode })
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -68,6 +70,13 @@ export default function LoginPage() {
             <label>Password *</label>
             <input required type="password" minLength={4} value={form.password} onChange={set('password')} placeholder="••••••••" />
           </div>
+
+          {mode === 'register' && (
+            <div className="field">
+              <label>Referral code <span className="admin-muted">(optional)</span></label>
+              <input value={form.referralCode} onChange={set('referralCode')} placeholder="A friend's code — you both get points" />
+            </div>
+          )}
 
           {mode === 'login' && (
             <p className="auth-forgot">

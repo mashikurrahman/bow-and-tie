@@ -17,6 +17,7 @@ import { recomputeProductRating } from '../lib/reviews'
 import { getPublicSettings, saveSettings } from '../lib/settings'
 import { toCsv, sendCsv } from '../lib/csv'
 import { saveImage } from '../lib/storage'
+import { awardOnDelivered, refundRedeemedPoints } from '../lib/loyalty'
 import { sendWhatsAppAsync, restockAlert, buildSalesReport } from '../lib/whatsapp'
 import { createConsignment, COURIERS } from '../lib/courier'
 import type { OrderEmailData } from '../lib/emails'
@@ -261,6 +262,8 @@ router.patch(
       data: { status, timeline: JSON.stringify(timeline) },
       include: { items: true },
     })
+    // Loyalty: credit earned points + any referral bonus once, on delivery.
+    if (status === 'Delivered') await awardOnDelivered(updated.id)
     // Email the customer about the status change (skip the initial Processing).
     if (updated.customerEmail && status !== 'Processing') {
       sendMailAsync(
@@ -310,6 +313,9 @@ router.patch(
         })
       }),
     )
+    if (status === 'Delivered') {
+      for (const o of orders) await awardOnDelivered(o.id)
+    }
     res.json({ updated: orders.length })
   }),
 )
@@ -420,6 +426,8 @@ router.patch(
       })
     })
 
+    // Give back any loyalty points spent on a refunded order.
+    if (action === 'refund') await refundRedeemedPoints(updated.id)
     if (updated.customerEmail && emailStatus) {
       sendMailAsync(orderStatusEmail(updated.customerEmail, orderEmailDataFor(updated), emailStatus))
     }

@@ -178,6 +178,21 @@
 .qty-lg button { width: 40px; height: 46px; font-size: 1.3rem; }
 .wish-btn { white-space: nowrap; }
 
+/* Loyalty / rewards */
+.rewards-banner { display: flex; gap: 24px; align-items: center; flex-wrap: wrap; background: linear-gradient(135deg, #fdf2f6, #f7e9f0); border: 1px solid #f0d6df; border-radius: var(--radius-lg); padding: 20px 24px; margin-bottom: 24px; }
+.rewards-points { text-align: center; padding-right: 24px; border-right: 1px solid #f0d6df; }
+.rewards-num { display: block; font-size: 2.4rem; font-weight: 800; color: #a63c60; line-height: 1; }
+.rewards-points small { color: #7a3350; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; font-size: 0.7rem; }
+.rewards-points em { display: block; color: #6b5560; font-style: normal; font-size: 0.8rem; margin-top: 4px; }
+.rewards-ref { flex: 1; min-width: 240px; }
+.rewards-ref strong { color: var(--heading); font-size: 1rem; }
+.rewards-ref p { color: #6b5560; font-size: 0.85rem; margin: 4px 0 10px; }
+.rewards-code { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.rewards-code code { background: #fff; border: 1px dashed #d9a7bb; border-radius: 8px; padding: 6px 14px; font-weight: 700; letter-spacing: 0.08em; color: #a63c60; }
+@media (max-width: 560px) { .rewards-points { border-right: none; padding-right: 0; } }
+.points-redeem { display: flex; align-items: center; gap: 8px; padding: 10px 12px; margin: 10px 0; background: #fff9fb; border: 1px dashed var(--border); border-radius: var(--radius-md); font-size: 0.85rem; cursor: pointer; }
+.points-earn-hint { font-size: 0.78rem; color: #a63c60; text-align: right; margin-top: 6px; }
+
 /* Bundles ("complete the look") */
 .bundles-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
 .bundle-card { border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; background: #fff; display: flex; flex-direction: column; }

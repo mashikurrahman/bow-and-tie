@@ -37,6 +37,14 @@ export const config = {
     to: process.env.WHATSAPP_ADMIN_TO ?? '', // admin's number in international format, e.g. 8801XXXXXXXXX
     lowStockThreshold: Number(process.env.LOW_STOCK_THRESHOLD ?? 5),
   },
+  // Loyalty programme. Points are worth ৳1 each. Customers earn earnRate × the
+  // order subtotal as points (credited when the order is delivered), and a
+  // referrer + their friend each get referralReward points on the friend's
+  // first delivered order.
+  loyalty: {
+    earnRate: Number(process.env.LOYALTY_EARN_RATE ?? 0.05),
+    referralReward: Number(process.env.LOYALTY_REFERRAL_REWARD ?? 100),
+  },
   // Manual mobile-banking payment numbers shown at checkout (customer sends
   // money here, then enters the transaction id). These are defaults — the admin
   // can override them from the settings panel (stored in the Setting table).

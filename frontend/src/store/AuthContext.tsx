@@ -14,7 +14,7 @@ type AuthValue = {
   user: User | null
   isAuthed: boolean
   loading: boolean
-  register: (input: { name: string; email: string; password: string }) => Promise<void>
+  register: (input: { name: string; email: string; password: string; referralCode?: string }) => Promise<void>
   login: (email: string, password: string) => Promise<void>
   oauth: (provider: 'google' | 'facebook', token: string) => Promise<void>
   logout: () => void
@@ -43,7 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => setLoading(false))
   }, [])
 
-  const register = useCallback(async (input: { name: string; email: string; password: string }) => {
+  const register = useCallback(async (input: { name: string; email: string; password: string; referralCode?: string }) => {
     setUser(await auth.register(input))
   }, [])
 

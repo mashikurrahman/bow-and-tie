@@ -30,6 +30,10 @@ model User {
   permissions   String    @default("[]") // JSON array of section keys a staff user may access
   emailVerified Boolean   @default(false) // customer confirmed their email via the link
   adminNote     String    @default("") // private CRM note the shop keeps on this customer
+  points           Int      @default(0) // loyalty points balance (1 point = ৳1)
+  referralCode     String?  @unique // this user's own code to share
+  referredBy       String?  // referralCode of whoever referred them
+  referralRewarded Boolean  @default(false) // referral bonus already paid out (on first delivered order)
   addresses     Address[]
   orders        Order[]
   createdAt     DateTime  @default(now())
@@ -169,6 +173,9 @@ model Order {
   paymentVerified Boolean @default(false) // admin confirmed the txn against their statement
   giftWrap        Boolean @default(false) // customer asked for gift wrapping
   giftMessage     String? // optional gift note to include with the order
+  pointsRedeemed  Int     @default(0) // loyalty points spent on this order (৳ off)
+  pointsEarned    Int     @default(0) // points this order will earn on delivery
+  pointsAwarded   Boolean @default(false) // earned points already credited to the customer
   notes           String?
   promoCode       String?
   courier         String? // "pathao" | "steadfast" | "redx"

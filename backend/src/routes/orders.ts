@@ -12,6 +12,7 @@ import { sendWhatsAppAsync, newOrderAlert, lowStockAlert } from '../lib/whatsapp
 import { orderConfirmationEmail, orderStatusEmail, type OrderEmailData } from '../lib/emails'
 import { clearAbandonedCart } from '../lib/abandonedCart'
 import { restockOrderItems } from '../lib/inventory'
+import { pointsForOrder, refundRedeemedPoints } from '../lib/loyalty'
 
 const router = Router()
 
@@ -76,6 +77,7 @@ const createSchema = z.object({
   txnId: z.string().optional(),
   giftWrap: z.boolean().optional(),
   giftMessage: z.string().max(500).optional(),
+  redeemPoints: z.number().int().nonnegative().optional(),
   notes: z.string().optional(),
   promoCode: z.string().optional(),
 }).refine((v) => v.payment === 'cod' || Boolean(v.txnId?.trim()), {
@@ -198,12 +200,28 @@ router.post(
         }
       }
 
+      // Loyalty: a logged-in customer may spend points (1 point = ৳1), capped at
+      // the after-discount order value and their balance. Points are deducted now
+      // and given back if the order is cancelled/refunded. Earned points are
+      // computed here but only credited when the order is delivered.
+      let pointsRedeemed = 0
+      let pointsEarned = 0
+      if (req.user?.userId) {
+        const acct = await tx.user.findUnique({ where: { id: req.user.userId }, select: { points: true } })
+        const balance = acct?.points ?? 0
+        pointsRedeemed = Math.max(0, Math.min(input.redeemPoints ?? 0, balance, subtotal - discount))
+        if (pointsRedeemed > 0) {
+          await tx.user.update({ where: { id: req.user.userId }, data: { points: { decrement: pointsRedeemed } } })
+        }
+        pointsEarned = pointsForOrder(subtotal)
+      }
+
       // Zone drives the delivery fee; fall back to guessing from the city.
       const zone =
         input.deliveryZone ??
         (input.customer.city.trim().toLowerCase() === 'dhaka' ? 'inside' : 'outside')
       const shipping = shippingFor(zone, subtotal)
-      const total = subtotal - discount + shipping
+      const total = subtotal - discount - pointsRedeemed + shipping
       const now = new Date().toISOString()
 
       return tx.order.create({
@@ -224,6 +242,8 @@ router.post(
           txnId: input.txnId,
           giftWrap: input.giftWrap ?? false,
           giftMessage: input.giftMessage,
+          pointsRedeemed,
+          pointsEarned,
           notes: input.notes,
           promoCode,
           status: 'Processing',
@@ -325,6 +345,7 @@ router.post(
       })
     })
 
+    await refundRedeemedPoints(updated.id)
     if (updated.customerEmail) {
       sendMailAsync(orderStatusEmail(updated.customerEmail, orderEmailData(updated), 'Cancelled'))
     }

@@ -23,6 +23,8 @@ export type User = {
   role: string
   permissions?: string[]
   emailVerified?: boolean
+  points?: number
+  referralCode?: string
   addresses: Address[]
   createdAt: string
 }
@@ -64,6 +66,8 @@ export type Order = {
   paymentVerified?: boolean
   giftWrap?: boolean
   giftMessage?: string
+  pointsRedeemed?: number
+  pointsEarned?: number
   notes?: string
   promoCode?: string
   status: OrderStatus
@@ -80,7 +84,7 @@ export const ORDER_FLOW: OrderStatus[] = ['Processing', 'Confirmed', 'Shipped', 
 
 // ----- Auth ---------------------------------------------------------------
 export const auth = {
-  async register(input: { name: string; email: string; password: string }): Promise<User> {
+  async register(input: { name: string; email: string; password: string; referralCode?: string }): Promise<User> {
     const { token, user } = await api.post<{ token: string; user: User }>('/auth/register', input)
     setToken(token)
     return user
@@ -168,6 +172,7 @@ export type CreateOrderInput = {
   txnId?: string
   giftWrap?: boolean
   giftMessage?: string
+  redeemPoints?: number
   notes?: string
   promoCode?: string
 }
