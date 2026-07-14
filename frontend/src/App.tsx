@@ -44,6 +44,9 @@ const AdminBulkPrint = lazy(() => import('./admin/pages/AdminBulkPrint'))
 const AdminCampaigns = lazy(() => import('./admin/pages/AdminCampaigns'))
 const AdminCustomerDetail = lazy(() => import('./admin/pages/AdminCustomerDetail'))
 const AdminBulkImages = lazy(() => import('./admin/pages/AdminBulkImages'))
+const AdminExpenses = lazy(() => import('./admin/pages/AdminExpenses'))
+const AdminBundles = lazy(() => import('./admin/pages/AdminBundles'))
+const AdminActivity = lazy(() => import('./admin/pages/AdminActivity'))
 const AdminPromotions = lazy(() => import('./admin/pages/AdminPromotions'))
 const AdminCoupons = lazy(() => import('./admin/pages/AdminCoupons'))
 const AdminSettings = lazy(() => import('./admin/pages/AdminSettings'))
@@ -106,6 +109,9 @@ export default function App() {
         <Route path="customers" element={<AdminCustomers />} />
         <Route path="customers/:id" element={<AdminCustomerDetail />} />
         <Route path="reports" element={<AdminReports />} />
+        <Route path="expenses" element={<AdminExpenses />} />
+        <Route path="bundles" element={<AdminBundles />} />
+        <Route path="activity" element={<AdminActivity />} />
         <Route path="questions" element={<AdminQuestions />} />
         <Route path="staff" element={<AdminStaff />} />
         <Route path="promotions" element={<AdminPromotions />} />

@@ -1,10 +1,12 @@
-import { useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { usePageMeta } from '../hooks/usePageMeta'
 import { testimonials, trustPoints } from '../data'
+import { settings as settingsApi } from '../services/db'
 import { formatPrice, useStore } from '../store/StoreContext'
 import { useProducts } from '../store/ProductsContext'
 import ProductCard from '../components/ProductCard'
+import BundleShowcase from '../components/BundleShowcase'
 import Newsletter from '../components/Newsletter'
 import PromoSlider from '../components/PromoSlider'
 import PromoPopup from '../components/PromoPopup'
@@ -23,6 +25,14 @@ export default function HomePage() {
   const { addToCart } = useStore()
   const { products } = useProducts()
   const scrollRef = useRef<HTMLDivElement>(null)
+  const [hero, setHero] = useState({ heroTitle: '', heroSubtitle: '', heroCtaLabel: '', heroCtaLink: '' })
+
+  useEffect(() => {
+    settingsApi.get().then((s) => setHero({
+      heroTitle: s.heroTitle ?? '', heroSubtitle: s.heroSubtitle ?? '',
+      heroCtaLabel: s.heroCtaLabel ?? '', heroCtaLink: s.heroCtaLink ?? '',
+    })).catch(() => {})
+  }, [])
 
   // Best sellers = most-reviewed items (prioritising flagged ones), capped so
   // the carousel fills the row instead of leaving a gap.
@@ -59,11 +69,15 @@ export default function HomePage() {
         <div className="hero-content">
           <span className="hero-badge-pill">✨ Free delivery over ৳2500</span>
           <h1>
-            Shop by your <span className="highlight">favourite style</span> &amp; instantly
-            brighten up your look.
+            {hero.heroTitle ? (
+              hero.heroTitle
+            ) : (
+              <>Shop by your <span className="highlight">favourite style</span> &amp; instantly brighten up your look.</>
+            )}
           </h1>
-          <Link to="/shop" className="btn btn-lg">
-            Shop Now →
+          {hero.heroSubtitle && <p className="hero-sub">{hero.heroSubtitle}</p>}
+          <Link to={hero.heroCtaLink || '/shop'} className="btn btn-lg">
+            {hero.heroCtaLabel || 'Shop Now'} →
           </Link>
         </div>
         <div className="hero-images">
@@ -87,6 +101,9 @@ export default function HomePage() {
           </div>
         ))}
       </section>
+
+      {/* BUNDLES */}
+      <BundleShowcase />
 
       {/* BEST SELLERS */}
       <section className="section" id="bestsellers">

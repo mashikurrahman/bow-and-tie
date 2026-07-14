@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { prisma } from '../prisma'
 import { asyncHandler, HttpError } from '../middleware/error'
 import { requireAuth, requireStaff, checkPermission, ADMIN_SECTIONS } from '../middleware/auth'
+import { auditLog } from '../middleware/audit'
 import { hashPassword } from '../lib/auth'
 import { serializeOrder, serializeProduct } from '../lib/serialize'
 import { serializePromotion } from '../lib/promotions'
@@ -22,7 +23,7 @@ import type { OrderEmailData } from '../lib/emails'
 import { ORDER_FLOW, config } from '../config'
 
 const router = Router()
-router.use(requireAuth, requireStaff, checkPermission)
+router.use(requireAuth, requireStaff, checkPermission, auditLog)
 
 // In-memory upload for bulk imports (parsed then discarded, never saved to disk).
 const importUpload = multer({
@@ -1052,6 +1053,130 @@ router.post(
   }),
 )
 
+// ---- Audit log -----------------------------------------------------------
+router.get(
+  '/audit-logs',
+  asyncHandler(async (_req, res) => {
+    const logs = await prisma.auditLog.findMany({ orderBy: { createdAt: 'desc' }, take: 300 })
+    const ids = [...new Set(logs.map((l) => l.userId).filter(Boolean))] as string[]
+    const users = await prisma.user.findMany({ where: { id: { in: ids } }, select: { id: true, name: true } })
+    const byId = new Map(users.map((u) => [u.id, u.name]))
+    res.json({
+      logs: logs.map((l) => ({
+        id: l.id,
+        user: l.userId ? byId.get(l.userId) ?? 'Removed user' : 'System',
+        action: l.action,
+        at: l.createdAt.toISOString(),
+      })),
+    })
+  }),
+)
+
+// ---- Expenses (for the profit / P&L view) --------------------------------
+const expenseSchema = z.object({
+  date: z.string().optional(),
+  category: z.string().min(1).max(60),
+  amount: z.number().int().nonnegative(),
+  note: z.string().max(300).default(''),
+})
+
+router.get(
+  '/expenses',
+  asyncHandler(async (req, res) => {
+    const { from, to } = req.query as { from?: string; to?: string }
+    const where =
+      from || to
+        ? { date: { ...(from ? { gte: new Date(from) } : {}), ...(to ? { lte: new Date(to + 'T23:59:59') } : {}) } }
+        : {}
+    const expenses = await prisma.expense.findMany({ where, orderBy: { date: 'desc' } })
+    res.json({
+      expenses: expenses.map((e) => ({ id: e.id, date: e.date.toISOString().slice(0, 10), category: e.category, amount: e.amount, note: e.note })),
+      total: expenses.reduce((s, e) => s + e.amount, 0),
+    })
+  }),
+)
+
+router.post(
+  '/expenses',
+  asyncHandler(async (req, res) => {
+    const d = expenseSchema.parse(req.body)
+    const expense = await prisma.expense.create({
+      data: { date: d.date ? new Date(d.date) : new Date(), category: d.category, amount: d.amount, note: d.note },
+    })
+    res.status(201).json({ expense: { id: expense.id, date: expense.date.toISOString().slice(0, 10), category: expense.category, amount: expense.amount, note: expense.note } })
+  }),
+)
+
+router.delete(
+  '/expenses/:id',
+  asyncHandler(async (req, res) => {
+    await prisma.expense.delete({ where: { id: req.params.id } }).catch(() => {
+      throw new HttpError(404, 'Expense not found')
+    })
+    res.json({ ok: true })
+  }),
+)
+
+// ---- Bundles ("complete the look" sets) ----------------------------------
+const bundleSchema = z.object({
+  title: z.string().min(1).max(120),
+  description: z.string().max(500).default(''),
+  productIds: z.array(z.string()).default([]),
+  image: z.string().default(''),
+  active: z.boolean().default(true),
+})
+
+router.get(
+  '/bundles',
+  asyncHandler(async (_req, res) => {
+    const bundles = await prisma.bundle.findMany({ orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }] })
+    res.json({
+      bundles: bundles.map((b) => ({
+        id: b.id,
+        title: b.title,
+        description: b.description,
+        productIds: parseJsonArr(b.productIds),
+        image: b.image,
+        active: b.active,
+      })),
+    })
+  }),
+)
+
+router.post(
+  '/bundles',
+  asyncHandler(async (req, res) => {
+    const d = bundleSchema.parse(req.body)
+    const b = await prisma.bundle.create({
+      data: { title: d.title, description: d.description, productIds: JSON.stringify(d.productIds), image: d.image, active: d.active },
+    })
+    res.status(201).json({ bundle: { id: b.id, title: b.title, description: b.description, productIds: parseJsonArr(b.productIds), image: b.image, active: b.active } })
+  }),
+)
+
+router.put(
+  '/bundles/:id',
+  asyncHandler(async (req, res) => {
+    const d = bundleSchema.parse(req.body)
+    const b = await prisma.bundle
+      .update({ where: { id: req.params.id }, data: { title: d.title, description: d.description, productIds: JSON.stringify(d.productIds), image: d.image, active: d.active } })
+      .catch(() => {
+        throw new HttpError(404, 'Bundle not found')
+      })
+    res.json({ bundle: { id: b.id, title: b.title, description: b.description, productIds: parseJsonArr(b.productIds), image: b.image, active: b.active } })
+  }),
+)
+
+router.delete(
+  '/bundles/:id',
+  asyncHandler(async (req, res) => {
+    await prisma.bundle.delete({ where: { id: req.params.id } }).catch(() => {
+      throw new HttpError(404, 'Bundle not found')
+    })
+    res.json({ ok: true })
+  }),
+)
+
 // ---- Storefront settings -------------------------------------------------
 // Editable settings shown on the storefront (currently the bKash/Nagad merchant
 // numbers). GET returns current values (with env defaults filled in); PUT saves.
@@ -1065,9 +1190,8 @@ router.get(
 router.put(
   '/settings',
   asyncHandler(async (req, res) => {
-    const patch = z
-      .object({ bkashNumber: z.string().max(32).optional(), nagadNumber: z.string().max(32).optional() })
-      .parse(req.body)
+    // Accept any string-valued keys; saveSettings ignores unknown ones.
+    const patch = z.record(z.string().max(2000)).parse(req.body)
     await saveSettings(patch)
     res.json(await getPublicSettings())
   }),

@@ -5,9 +5,9 @@ import { admin } from '../../services/admin'
 
 export default function AdminSettings() {
   const { user, updateProfile } = useAuth()
-  const [tab, setTab] = useState<'account' | 'security' | 'payments'>('account')
+  const [tab, setTab] = useState<'account' | 'security' | 'payments' | 'storefront'>('account')
 
-  const [store, setStore] = useState({ bkashNumber: '', nagadNumber: '' })
+  const [store, setStore] = useState({ bkashNumber: '', nagadNumber: '', heroTitle: '', heroSubtitle: '', heroCtaLabel: '', heroCtaLink: '', heroImage: '' })
   const [storeMsg, setStoreMsg] = useState('')
   const [storeBusy, setStoreBusy] = useState(false)
 
@@ -71,6 +71,7 @@ export default function AdminSettings() {
         <button className={tab === 'account' ? 'active' : ''} onClick={() => setTab('account')}>Account</button>
         <button className={tab === 'security' ? 'active' : ''} onClick={() => setTab('security')}>Security</button>
         <button className={tab === 'payments' ? 'active' : ''} onClick={() => setTab('payments')}>Payments</button>
+        <button className={tab === 'storefront' ? 'active' : ''} onClick={() => setTab('storefront')}>Storefront</button>
       </div>
 
       {tab === 'account' ? (
@@ -103,7 +104,7 @@ export default function AdminSettings() {
             <button className="a-btn" type="submit" disabled={busy}>{busy ? 'Updating…' : 'Update Password'}</button>
           </form>
         </div>
-      ) : (
+      ) : tab === 'payments' ? (
         <div className="admin-card" style={{ maxWidth: 640 }}>
           <h3 style={{ marginBottom: 6 }}>Manual payment numbers</h3>
           <p className="admin-muted" style={{ marginBottom: 16, fontSize: '0.85rem' }}>
@@ -118,6 +119,31 @@ export default function AdminSettings() {
             <div className="a-field">
               <label>Nagad number</label>
               <input value={store.nagadNumber} onChange={(e) => setStore((s) => ({ ...s, nagadNumber: e.target.value }))} placeholder="01XXXXXXXXX" />
+            </div>
+            <button className="a-btn" type="submit" disabled={storeBusy}>{storeBusy ? 'Saving…' : 'Save'}</button>
+          </form>
+        </div>
+      ) : (
+        <div className="admin-card" style={{ maxWidth: 640 }}>
+          <h3 style={{ marginBottom: 6 }}>Homepage hero</h3>
+          <p className="admin-muted" style={{ marginBottom: 16, fontSize: '0.85rem' }}>
+            The big banner at the top of the home page. Leave a field blank to use the site&apos;s built-in default.
+          </p>
+          {storeMsg && <div className="a-success">{storeMsg}</div>}
+          <form onSubmit={saveStore}>
+            <div className="a-field"><label>Headline</label>
+              <input value={store.heroTitle} onChange={(e) => setStore((s) => ({ ...s, heroTitle: e.target.value }))} placeholder="Handcrafted bows for little moments" />
+            </div>
+            <div className="a-field"><label>Subtitle</label>
+              <input value={store.heroSubtitle} onChange={(e) => setStore((s) => ({ ...s, heroSubtitle: e.target.value }))} placeholder="Made with love in Dhaka" />
+            </div>
+            <div className="a-field-row">
+              <div className="a-field"><label>Button label</label>
+                <input value={store.heroCtaLabel} onChange={(e) => setStore((s) => ({ ...s, heroCtaLabel: e.target.value }))} placeholder="Shop now" />
+              </div>
+              <div className="a-field"><label>Button link</label>
+                <input value={store.heroCtaLink} onChange={(e) => setStore((s) => ({ ...s, heroCtaLink: e.target.value }))} placeholder="/shop" />
+              </div>
             </div>
             <button className="a-btn" type="submit" disabled={storeBusy}>{storeBusy ? 'Saving…' : 'Save'}</button>
           </form>

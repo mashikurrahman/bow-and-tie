@@ -200,6 +200,41 @@ model OrderItem {
   size      String?
 }
 
+// A curated product set ("Complete the look" / "Shop the bundle"). The store
+// shows the grouped products with an "add all to cart" action.
+model Bundle {
+  id          String   @id @default(cuid())
+  title       String
+  description String   @default("")
+  productIds  String   @default("[]") // JSON array of product ids, in display order
+  image       String   @default("")
+  active      Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+}
+
+// A business expense, for the profit/P&L view (rent, materials, ads, etc.).
+model Expense {
+  id        String   @id @default(cuid())
+  date      DateTime @default(now())
+  category  String
+  amount    Int // whole BDT
+  note      String   @default("")
+  createdAt DateTime @default(now())
+
+  @@index([date])
+}
+
+// An audit trail of admin/staff mutations (who did what, when).
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String // e.g. "PATCH /orders/BC123/status"
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
 // A saved, reusable email campaign (subject + HTML/text body) the admin can
 // broadcast to newsletter subscribers.
 model EmailTemplate {

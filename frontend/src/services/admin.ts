@@ -364,9 +364,30 @@ export const admin = {
     return data as BulkImageResult
   },
 
-  // Storefront settings (bKash/Nagad merchant numbers)
+  // Storefront settings (bKash/Nagad numbers + homepage hero content)
   getSettings: () => api.get<StoreSettings>('/admin/settings'),
   updateSettings: (data: Partial<StoreSettings>) => api.put<StoreSettings>('/admin/settings', data),
+
+  // Audit log
+  listAuditLogs: () => api.get<{ logs: AuditEntry[] }>('/admin/audit-logs'),
+
+  // Expenses
+  listExpenses: (from?: string, to?: string) => {
+    const qs = new URLSearchParams()
+    if (from) qs.set('from', from)
+    if (to) qs.set('to', to)
+    const s = qs.toString()
+    return api.get<{ expenses: Expense[]; total: number }>(`/admin/expenses${s ? `?${s}` : ''}`)
+  },
+  addExpense: (data: { date?: string; category: string; amount: number; note: string }) =>
+    api.post<{ expense: Expense }>('/admin/expenses', data),
+  deleteExpense: (id: string) => api.del<{ ok: boolean }>(`/admin/expenses/${id}`),
+
+  // Bundles
+  listBundles: () => api.get<{ bundles: AdminBundle[] }>('/admin/bundles'),
+  createBundle: (data: BundleInput) => api.post<{ bundle: AdminBundle }>('/admin/bundles', data),
+  updateBundle: (id: string, data: BundleInput) => api.put<{ bundle: AdminBundle }>(`/admin/bundles/${id}`, data),
+  deleteBundle: (id: string) => api.del<{ ok: boolean }>(`/admin/bundles/${id}`),
 
   // Email campaigns (saved templates + broadcast to newsletter subscribers)
   listEmailTemplates: () => api.get<{ templates: EmailTemplate[]; subscribers: number }>('/admin/email-templates'),
@@ -381,7 +402,19 @@ export type BulkImageResult = {
   matched: { file: string; product: string; kind: 'primary' | 'gallery' }[]
   unmatched: string[]
 }
-export type StoreSettings = { bkashNumber: string; nagadNumber: string }
+export type StoreSettings = {
+  bkashNumber: string
+  nagadNumber: string
+  heroTitle: string
+  heroSubtitle: string
+  heroCtaLabel: string
+  heroCtaLink: string
+  heroImage: string
+}
+export type AuditEntry = { id: string; user: string; action: string; at: string }
+export type Expense = { id: string; date: string; category: string; amount: number; note: string }
+export type AdminBundle = { id: string; title: string; description: string; productIds: string[]; image: string; active: boolean }
+export type BundleInput = { title: string; description: string; productIds: string[]; image: string; active: boolean }
 export type EmailTemplate = { id: string; name: string; subject: string; body: string; createdAt?: string; updatedAt?: string }
 export type EmailTemplateInput = { name: string; subject: string; body: string }
 

@@ -13,6 +13,8 @@ const nav = [
   { to: '/admin/returns', label: 'Returns', icon: '↩️', perm: 'returns' },
   { to: '/admin/customers', label: 'Customers', icon: '👥', perm: 'customers' },
   { to: '/admin/reports', label: 'Reports', icon: '📈', perm: 'reports' },
+  { to: '/admin/expenses', label: 'Expenses', icon: '💸', perm: 'reports' },
+  { to: '/admin/bundles', label: 'Bundles', icon: '🎀', perm: 'products' },
   { to: '/admin/promotions', label: 'Promotions', icon: '🎯', perm: 'promotions' },
   { to: '/admin/coupons', label: 'Coupons', icon: '🎟️', perm: 'coupons' },
   { to: '/admin/campaigns', label: 'Campaigns', icon: '📣', perm: 'marketing' },
@@ -94,6 +96,16 @@ export default function AdminLayout() {
             >
               <span className="admin-nav-icon">🛡️</span>
               Staff &amp; Roles
+            </NavLink>
+          )}
+          {isAdmin && (
+            <NavLink
+              to="/admin/activity"
+              className={({ isActive }) => `admin-nav-item ${isActive ? 'active' : ''}`}
+              onClick={() => setOpen(false)}
+            >
+              <span className="admin-nav-icon">📜</span>
+              Activity Log
             </NavLink>
           )}
           <NavLink

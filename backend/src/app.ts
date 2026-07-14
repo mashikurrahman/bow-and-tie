@@ -15,6 +15,7 @@ import promotionRoutes from './routes/promotions'
 import cartRoutes from './routes/cart'
 import newsletterRoutes from './routes/newsletter'
 import settingsRoutes from './routes/settings'
+import bundleRoutes from './routes/bundles'
 import sitemapRoutes from './routes/sitemap'
 
 export function createApp() {
@@ -63,6 +64,7 @@ export function createApp() {
   app.use('/api/cart', cartRoutes)
   app.use('/api/newsletter', newsletterRoutes)
   app.use('/api/settings', settingsRoutes)
+  app.use('/api/bundles', bundleRoutes)
   app.use('/api/account', accountRoutes)
   app.use('/api/admin/upload', uploadRoutes)
   app.use('/api/upload', customerUploadRouter)

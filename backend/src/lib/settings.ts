@@ -10,6 +10,12 @@ import { config } from '../config'
 export const SETTING_DEFAULTS: Record<string, string> = {
   bkashNumber: config.payment.bkashNumber,
   nagadNumber: config.payment.nagadNumber,
+  // Homepage hero (editable in the admin — blank means use the site default).
+  heroTitle: '',
+  heroSubtitle: '',
+  heroCtaLabel: '',
+  heroCtaLink: '',
+  heroImage: '',
 }
 
 export type SettingKey = keyof typeof SETTING_DEFAULTS
@@ -25,7 +31,7 @@ export async function getPublicSettings(): Promise<Record<SettingKey, string>> {
 }
 
 /** Upsert a partial set of settings (unknown keys are ignored). */
-export async function saveSettings(patch: Partial<Record<SettingKey, string>>): Promise<void> {
+export async function saveSettings(patch: Record<string, string>): Promise<void> {
   const entries = Object.entries(patch).filter(([k]) => SETTING_KEYS.includes(k as SettingKey))
   await Promise.all(
     entries.map(([key, value]) =>

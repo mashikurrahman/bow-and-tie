@@ -300,7 +300,15 @@ export const coupons = {
 }
 
 // ----- Storefront settings ------------------------------------------------
-export type PublicSettings = { bkashNumber: string; nagadNumber: string }
+export type PublicSettings = {
+  bkashNumber: string
+  nagadNumber: string
+  heroTitle?: string
+  heroSubtitle?: string
+  heroCtaLabel?: string
+  heroCtaLink?: string
+  heroImage?: string
+}
 
 export const settings = {
   /** Public storefront settings (e.g. the bKash/Nagad numbers for checkout). */
@@ -309,6 +317,26 @@ export const settings = {
       return await api.get<PublicSettings>('/settings')
     } catch {
       return { bkashNumber: '', nagadNumber: '' }
+    }
+  },
+}
+
+// ----- Bundles ("complete the look" sets) ---------------------------------
+export type Bundle = {
+  id: string
+  title: string
+  description: string
+  image: string
+  products: { id: string; name: string; price: number; image: string }[]
+}
+
+export const bundles = {
+  async list(): Promise<Bundle[]> {
+    try {
+      const { bundles } = await api.get<{ bundles: Bundle[] }>('/bundles')
+      return bundles
+    } catch {
+      return []
     }
   },
 }

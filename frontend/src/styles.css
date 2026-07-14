@@ -178,6 +178,20 @@
 .qty-lg button { width: 40px; height: 46px; font-size: 1.3rem; }
 .wish-btn { white-space: nowrap; }
 
+/* Bundles ("complete the look") */
+.bundles-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+.bundle-card { border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; background: #fff; display: flex; flex-direction: column; }
+.bundle-cover { width: 100%; height: 160px; object-fit: cover; }
+.bundle-body { padding: 16px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+.bundle-body h3 { font-family: var(--heading-font); color: var(--heading); font-size: 1.1rem; }
+.bundle-desc { color: var(--text-light, #6b5560); font-size: 0.85rem; }
+.bundle-thumbs { display: flex; gap: 6px; flex-wrap: wrap; }
+.bundle-thumbs img { width: 46px; height: 46px; border-radius: 8px; object-fit: cover; border: 1px solid var(--border); }
+.bundle-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: auto; padding-top: 8px; }
+.bundle-total { font-weight: 700; color: var(--heading); }
+.bundle-total small { font-weight: 400; color: var(--text-light, #6b5560); font-size: 0.75rem; }
+.hero-sub { color: var(--text-light, #6b5560); font-size: 1.02rem; margin: -4px 0 4px; }
+
 /* Gift option (checkout) */
 .gift-option { margin: 14px 0; padding: 14px; border: 1px dashed var(--border); border-radius: var(--radius-md); background: #fff9fb; }
 .gift-toggle { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 600; color: var(--heading); }
