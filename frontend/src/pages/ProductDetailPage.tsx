@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { formatPrice, useStore } from '../store/StoreContext'
+import { formatPrice, maxCartQty, useStore } from '../store/StoreContext'
 import { useProducts } from '../store/ProductsContext'
 import { useAuth } from '../store/AuthContext'
 import { stockAlerts } from '../services/db'
@@ -69,6 +69,12 @@ export default function ProductDetailPage() {
     setVariantId(product?.variants?.find((v) => v.inStock)?.id ?? product?.variants?.[0]?.id)
   }, [product])
 
+  // Start from 1 again when the product or chosen variant changes, so a high
+  // quantity can't carry over to an option with less stock.
+  useEffect(() => {
+    setQty(1)
+  }, [product, variantId])
+
   if (!product) {
     return (
       <div className="page empty-state">
@@ -90,6 +96,7 @@ export default function ProductDetailPage() {
   const discount = wasPrice > shownPrice ? Math.round(((wasPrice - shownPrice) / wasPrice) * 100) : 0
   const related = getRelated(product)
   const wished = isWished(product.id)
+  const maxQty = maxCartQty(product, hasVariants ? selectedVariant?.id : undefined)
   const mainImg = selectedVariant?.image ?? product.gallery?.[activeImg] ?? product.image
 
   const handleAdd = (openCart: boolean) => {
@@ -238,7 +245,10 @@ export default function ProductDetailPage() {
                 <div className="cart-qty qty-lg">
                   <button onClick={() => setQty((q) => Math.max(1, q - 1))} aria-label="Decrease">−</button>
                   <span>{qty}</span>
-                  <button onClick={() => setQty((q) => q + 1)} aria-label="Increase">+</button>
+                  <button
+                    onClick={() => setQty((q) => (q + 1 > maxQty ? (notify(`Only ${maxQty} in stock`), q) : q + 1))}
+                    aria-label="Increase"
+                  >+</button>
                 </div>
                 <button className="btn btn-full" onClick={() => handleAdd(false)}>Add to Cart</button>
               </div>

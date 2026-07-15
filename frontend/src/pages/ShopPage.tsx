@@ -5,7 +5,7 @@ import { categories } from '../data'
 import { useProducts } from '../store/ProductsContext'
 import ProductCard from '../components/ProductCard'
 
-type Sort = 'featured' | 'price-asc' | 'price-desc' | 'rating'
+type Sort = 'featured' | 'newest' | 'price-asc' | 'price-desc' | 'rating'
 
 export default function ShopPage() {
   usePageMeta({ title: 'Shop All Hair Accessories', description: 'Browse all handcrafted bows, clips, silk pieces and sets. Filter by category to find your perfect piece.' })
@@ -51,6 +51,9 @@ export default function ShopPage() {
       case 'rating':
         list.sort((a, b) => b.rating - a.rating)
         break
+      case 'newest':
+        list.sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''))
+        break
       default:
         list.sort((a, b) => Number(b.featured ?? false) - Number(a.featured ?? false))
     }
@@ -74,6 +77,7 @@ export default function ShopPage() {
         />
         <select className="shop-sort" value={sort} onChange={(e) => setSort(e.target.value as Sort)}>
           <option value="featured">Featured</option>
+          <option value="newest">Newest</option>
           <option value="price-asc">Price: Low to High</option>
           <option value="price-desc">Price: High to Low</option>
           <option value="rating">Top Rated</option>

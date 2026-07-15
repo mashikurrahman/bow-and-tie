@@ -248,7 +248,7 @@ router.patch(
   '/orders/:id/status',
   asyncHandler(async (req, res) => {
     const { status } = statusSchema.parse(req.body)
-    const order = await prisma.order.findUnique({ where: { id: req.params.id } })
+    const order = await prisma.order.findUnique({ where: { id: req.params.id }, include: { items: true } })
     if (!order) throw new HttpError(404, 'Order not found')
     let timeline: { status: string; at: string }[] = []
     try {
@@ -257,13 +257,21 @@ router.patch(
       timeline = []
     }
     timeline.push({ status, at: new Date().toISOString() })
-    const updated = await prisma.order.update({
-      where: { id: order.id },
-      data: { status, timeline: JSON.stringify(timeline) },
-      include: { items: true },
+    // Cancelling returns reserved stock to inventory (same as a customer
+    // cancel) — but only once: skip if the order already gave its stock back.
+    const restock = status === 'Cancelled' && !['Cancelled', 'Returned'].includes(order.status)
+    const updated = await prisma.$transaction(async (tx) => {
+      if (restock) await restockOrderItems(tx, order.items)
+      return tx.order.update({
+        where: { id: order.id },
+        data: { status, timeline: JSON.stringify(timeline) },
+        include: { items: true },
+      })
     })
-    // Loyalty: credit earned points + any referral bonus once, on delivery.
+    // Loyalty: credit earned points + any referral bonus once, on delivery;
+    // give back any redeemed points when the order is cancelled.
     if (status === 'Delivered') await awardOnDelivered(updated.id)
+    if (status === 'Cancelled') await refundRedeemedPoints(updated.id)
     // Email the customer about the status change (skip the initial Processing).
     if (updated.customerEmail && status !== 'Processing') {
       sendMailAsync(
@@ -297,9 +305,9 @@ router.patch(
       .object({ ids: z.array(z.string()).min(1), status: statusSchema.shape.status })
       .parse(req.body)
     const at = new Date().toISOString()
-    const orders = await prisma.order.findMany({ where: { id: { in: ids } } })
-    await prisma.$transaction(
-      orders.map((o) => {
+    const orders = await prisma.order.findMany({ where: { id: { in: ids } }, include: { items: true } })
+    await prisma.$transaction(async (tx) => {
+      for (const o of orders) {
         let timeline: { status: string; at: string }[] = []
         try {
           timeline = JSON.parse(o.timeline)
@@ -307,14 +315,21 @@ router.patch(
           timeline = []
         }
         timeline.push({ status, at })
-        return prisma.order.update({
+        // Cancelling returns reserved stock to inventory (once per order).
+        if (status === 'Cancelled' && !['Cancelled', 'Returned'].includes(o.status)) {
+          await restockOrderItems(tx, o.items)
+        }
+        await tx.order.update({
           where: { id: o.id },
           data: { status, timeline: JSON.stringify(timeline) },
         })
-      }),
-    )
+      }
+    })
     if (status === 'Delivered') {
       for (const o of orders) await awardOnDelivered(o.id)
+    }
+    if (status === 'Cancelled') {
+      for (const o of orders) await refundRedeemedPoints(o.id)
     }
     res.json({ updated: orders.length })
   }),

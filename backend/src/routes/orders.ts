@@ -166,6 +166,11 @@ router.post(
         } else {
           // No variants: product-level price + stock (promotions apply).
           if (!product.inStock) throw new HttpError(409, `${product.name} is sold out.`)
+          // Tracked stock must cover the quantity (stock 0 with inStock=true is
+          // an untracked/custom item, so only enforce when stock is tracked).
+          if (product.stock > 0 && product.stock < line.quantity) {
+            throw new HttpError(409, `${product.name} — only ${product.stock} left.`)
+          }
           const sale = saleForProduct(product.price, product.id, livePromos)
           const unitPrice = sale?.price ?? product.price
           subtotal += unitPrice * line.quantity

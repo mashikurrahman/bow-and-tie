@@ -92,8 +92,9 @@ export default function CheckoutPage() {
   }
 
   const buildItems = (): OrderItem[] =>
-    cart.map((l) => {
-      const p = products.find((x) => x.id === l.productId)!
+    cart.flatMap((l) => {
+      const p = products.find((x) => x.id === l.productId)
+      if (!p) return [] // product removed from the catalog since it was carted
       const v = p.variants?.find((x) => x.id === l.variantId)
       return {
         productId: l.productId,

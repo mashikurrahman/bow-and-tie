@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import multer from 'multer'
 import path from 'node:path'
-import { requireAuth, requireAdmin } from '../middleware/auth'
+import { requireAuth, requireStaff } from '../middleware/auth'
 import { asyncHandler } from '../middleware/error'
 import { saveImage } from '../lib/storage'
 
@@ -23,9 +23,10 @@ const handleUpload = async (req: import('express').Request, res: import('express
   res.status(201).json({ url })
 }
 
-// Admin uploads (products, banners) — POST /api/admin/upload
+// Admin/staff uploads (products, banners) — POST /api/admin/upload. Staff
+// accounts manage products too, so any staff role may upload images.
 const router = Router()
-router.post('/', requireAuth, requireAdmin, upload.single('image'), asyncHandler(handleUpload))
+router.post('/', requireAuth, requireStaff, upload.single('image'), asyncHandler(handleUpload))
 export default router
 
 // Customer uploads (e.g. review photos) — POST /api/upload (any logged-in user)

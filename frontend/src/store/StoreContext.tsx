@@ -126,27 +126,46 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     (product, opts) => {
       const quantity = opts?.quantity ?? 1
       const incoming = { productId: product.id, variantId: opts?.variantId, color: opts?.color, size: opts?.size }
+      const max = maxCartQty(product, opts?.variantId)
+      if (max <= 0) {
+        notify(`${product.name} is sold out`)
+        return
+      }
+      let capped = false
       setCart((current) => {
         const existing = current.find((line) => lineKey(line) === lineKey(incoming))
         if (existing) {
-          return current.map((line) =>
-            line === existing ? { ...line, quantity: line.quantity + quantity } : line,
-          )
+          const next = Math.min(existing.quantity + quantity, max)
+          capped = next < existing.quantity + quantity
+          return current.map((line) => (line === existing ? { ...line, quantity: next } : line))
         }
-        return [...current, { ...incoming, quantity }]
+        capped = quantity > max
+        return [...current, { ...incoming, quantity: Math.min(quantity, max) }]
       })
-      notify(`${product.name} added to cart`)
+      notify(capped ? `Only ${max} in stock — quantity adjusted` : `${product.name} added to cart`)
     },
     [notify],
   )
 
-  const changeQuantity: StoreValue['changeQuantity'] = useCallback((key, delta) => {
-    setCart((current) =>
-      current
-        .map((line) => (lineKey(line) === key ? { ...line, quantity: line.quantity + delta } : line))
-        .filter((line) => line.quantity > 0),
-    )
-  }, [])
+  const changeQuantity: StoreValue['changeQuantity'] = useCallback(
+    (key, delta) => {
+      setCart((current) =>
+        current
+          .map((line) => {
+            if (lineKey(line) !== key) return line
+            const product = products.find((p) => p.id === line.productId)
+            const max = product ? maxCartQty(product, line.variantId) : Infinity
+            if (delta > 0 && line.quantity + delta > max) {
+              notify(`Only ${max} in stock`)
+              return { ...line, quantity: max }
+            }
+            return { ...line, quantity: line.quantity + delta }
+          })
+          .filter((line) => line.quantity > 0),
+      )
+    },
+    [products, notify],
+  )
 
   const removeFromCart: StoreValue['removeFromCart'] = useCallback((key) => {
     setCart((current) => current.filter((line) => lineKey(line) !== key))
@@ -276,6 +295,17 @@ export const shippingFor = (zone: ShippingZone, subtotal: number) =>
 
 /** Price a customer actually pays — the promo sale price if one applies. */
 export const effectivePrice = (p: Product) => p.sale?.price ?? p.price
+
+/** Most units of a product/variant that may be added to the cart. Untracked
+ * stock (no stock figure, e.g. custom items) is unlimited. */
+export const maxCartQty = (p: Product, variantId?: string): number => {
+  if (variantId) {
+    const v = p.variants?.find((x) => x.id === variantId)
+    if (v) return v.stock > 0 ? v.stock : 0
+  }
+  if (!p.inStock) return 0
+  return p.stock && p.stock > 0 ? p.stock : Infinity
+}
 
 /** Unit price for a cart line — the chosen variant's price, else the product's. */
 export const lineUnitPrice = (p: Product, line: { variantId?: string }) => {
